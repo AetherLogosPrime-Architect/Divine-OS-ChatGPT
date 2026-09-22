@@ -6,7 +6,6 @@ from pathlib import Path
 from divineos.backup import create_backup, restore_backup, verify_backup
 from divineos.projections import rebuild_projections
 from divineos.runtime import Runtime
-from divineos.store import verify_chain
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -49,11 +48,11 @@ def main(argv: list[str] | None = None) -> int:
     runtime.initialize()
     if args.command == "briefing":
         print(runtime.briefing())
-        return 0
+        return 0 if runtime.health().healthy else 1
     if args.command == "status":
-        ok, message, count = verify_chain(runtime.provenance.database)
-        print(f"{message} ({count} events)")
-        return 0 if ok else 1
+        health = runtime.health()
+        print("\n".join(health.messages))
+        return 0 if health.healthy else 1
     if args.command == "remember":
         memory_id = runtime.remember(args.text, args.evidence)
         print(f"Memory recorded: {memory_id}")
@@ -80,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Backup restored and verified: {restored}")
         return 0
     if args.command == "repair" and args.repair_command == "rebuild-projections":
-        rebuild_projections(runtime.provenance.database)
+        rebuild_projections(runtime.provenance.database, occupant=runtime.provenance.occupant)
         print("Projections rebuilt and recorded from the verified ledger")
         return 0
     return 2

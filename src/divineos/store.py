@@ -88,11 +88,17 @@ def transaction(database: Path) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-def append_event(conn: sqlite3.Connection, kind: str, payload: dict[str, Any]) -> str:
+def append_event(
+    conn: sqlite3.Connection,
+    kind: str,
+    payload: dict[str, Any],
+    *,
+    occurred_at: str | None = None,
+) -> str:
     previous = conn.execute("SELECT event_hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
     prev_hash = str(previous[0]) if previous else GENESIS_HASH
     event_id = uuid.uuid4().hex
-    occurred_at = datetime.now(UTC).isoformat()
+    occurred_at = occurred_at or datetime.now(UTC).isoformat()
     payload_json = _canonical(payload)
     event_hash = _event_hash(
         event_id=event_id,
@@ -113,7 +119,11 @@ def verify_chain(database: Path) -> tuple[bool, str, int]:
     if not database.is_file():
         return False, "STATE STORE MISSING", 0
     with read_connection(database) as conn:
-        rows = conn.execute("SELECT * FROM events ORDER BY seq").fetchall()
+        return verify_chain_on(conn)
+
+
+def verify_chain_on(conn: sqlite3.Connection) -> tuple[bool, str, int]:
+    rows = conn.execute("SELECT * FROM events ORDER BY seq").fetchall()
     previous = GENESIS_HASH
     for row in rows:
         if row["prev_hash"] != previous:
@@ -129,3 +139,20 @@ def verify_chain(database: Path) -> tuple[bool, str, int]:
             return False, f"LEDGER HASH BROKEN at sequence {row['seq']}", len(rows)
         previous = row["event_hash"]
     return True, "LEDGER VERIFIED", len(rows)
+
+
+def verify_occupant(conn: sqlite3.Connection, occupant: str) -> tuple[bool, str]:
+    first = conn.execute("SELECT kind, payload_json FROM events ORDER BY seq LIMIT 1").fetchone()
+    if first is None:
+        return False, "STATE UNINITIALIZED: no genesis event"
+    try:
+        payload = json.loads(first["payload_json"])
+    except (json.JSONDecodeError, TypeError):
+        return False, "OCCUPANT UNVERIFIABLE: invalid genesis payload"
+    if first["kind"] != "system.initialized" or not isinstance(payload, dict):
+        return False, "OCCUPANT UNVERIFIABLE: missing initialization event"
+    if payload.get("occupant") != occupant:
+        return False, f"OCCUPANT MISMATCH: state belongs to {payload.get('occupant')!r}"
+    if payload.get("schema") != 1:
+        return False, "SCHEMA UNRECOGNIZED: expected schema 1"
+    return True, "OCCUPANT VERIFIED"

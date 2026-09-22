@@ -24,7 +24,7 @@ def test_projection_drift_is_loud_and_rebuildable(provenance: Provenance) -> Non
     )
     assert "!!! PROJECTION DRIFT" in runtime.briefing()
 
-    rebuild_projections(provenance.database)
+    rebuild_projections(provenance.database, occupant=provenance.occupant)
 
     assert verify_projections(provenance.database) == (True, "PROJECTIONS VERIFIED")
     assert verify_chain(provenance.database) == (True, "LEDGER VERIFIED", 5)
@@ -43,7 +43,7 @@ def test_rebuild_refuses_an_invalid_ledger(provenance: Provenance) -> None:
         conn.commit()
 
     try:
-        rebuild_projections(provenance.database)
+        rebuild_projections(provenance.database, occupant=provenance.occupant)
     except RuntimeError as exc:
         assert "cannot rebuild from an invalid ledger" in str(exc)
     else:
