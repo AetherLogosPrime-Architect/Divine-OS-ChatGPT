@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from divineos.backup import create_backup, restore_backup, verify_backup
+from divineos.projections import rebuild_projections
 from divineos.runtime import Runtime
 from divineos.store import verify_chain
 
@@ -32,6 +33,9 @@ def _parser() -> argparse.ArgumentParser:
     backup_restore = backup_sub.add_parser("restore")
     backup_restore.add_argument("path", type=Path)
     backup_restore.add_argument("--to-home", required=True, type=Path)
+    repair = sub.add_parser("repair")
+    repair_sub = repair.add_subparsers(dest="repair_command", required=True)
+    repair_sub.add_parser("rebuild-projections")
     return parser
 
 
@@ -74,6 +78,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "backup" and args.backup_command == "restore":
         restored = restore_backup(args.path, args.to_home)
         print(f"Backup restored and verified: {restored}")
+        return 0
+    if args.command == "repair" and args.repair_command == "rebuild-projections":
+        rebuild_projections(runtime.provenance.database)
+        print("Projections rebuilt and recorded from the verified ledger")
         return 0
     return 2
 

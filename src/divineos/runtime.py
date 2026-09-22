@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from divineos.paths import Provenance, resolve_provenance
+from divineos.projections import verify_projections
 from divineos.store import append_event, initialize, read_connection, transaction, verify_chain
 
 
@@ -37,6 +38,10 @@ class Runtime:
         ok, ledger_message, _ = verify_chain(self.provenance.database)
         if not ok:
             messages.append(ledger_message)
+        else:
+            projections_ok, projection_message = verify_projections(self.provenance.database)
+            if not projections_ok:
+                messages.append(projection_message)
         with read_connection(self.provenance.database) as conn:
             memory_count = conn.execute(
                 "SELECT COUNT(*) FROM memories WHERE active = 1"
