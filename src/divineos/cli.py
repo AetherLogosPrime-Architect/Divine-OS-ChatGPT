@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
+from divineos.backup import create_backup, restore_backup, verify_backup
 from divineos.runtime import Runtime
 from divineos.store import verify_chain
 
@@ -21,6 +23,15 @@ def _parser() -> argparse.ArgumentParser:
     goal_add.add_argument("text")
     goal_done = goal_sub.add_parser("done")
     goal_done.add_argument("goal_id")
+    backup = sub.add_parser("backup")
+    backup_sub = backup.add_subparsers(dest="backup_command", required=True)
+    backup_create = backup_sub.add_parser("create")
+    backup_create.add_argument("path", type=Path)
+    backup_verify = backup_sub.add_parser("verify")
+    backup_verify.add_argument("path", type=Path)
+    backup_restore = backup_sub.add_parser("restore")
+    backup_restore.add_argument("path", type=Path)
+    backup_restore.add_argument("--to-home", required=True, type=Path)
     return parser
 
 
@@ -50,6 +61,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "goal" and args.goal_command == "done":
         runtime.complete_goal(args.goal_id)
         print(f"Goal completed: {args.goal_id}")
+        return 0
+    if args.command == "backup" and args.backup_command == "create":
+        manifest = create_backup(runtime.provenance.database, args.path)
+        print(f"Backup created and verified: {args.path.absolute()}")
+        print(f"Manifest: {manifest}")
+        return 0
+    if args.command == "backup" and args.backup_command == "verify":
+        ok, message = verify_backup(args.path)
+        print(message)
+        return 0 if ok else 1
+    if args.command == "backup" and args.backup_command == "restore":
+        restored = restore_backup(args.path, args.to_home)
+        print(f"Backup restored and verified: {restored}")
         return 0
     return 2
 
