@@ -66,16 +66,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Goal completed: {args.goal_id}")
         return 0
     if args.command == "backup" and args.backup_command == "create":
-        manifest = create_backup(runtime.provenance.database, args.path)
+        manifest = create_backup(runtime.provenance, args.path)
         print(f"Backup created and verified: {args.path.absolute()}")
         print(f"Manifest: {manifest}")
         return 0
     if args.command == "backup" and args.backup_command == "verify":
-        ok, message = verify_backup(args.path)
+        ok, message = verify_backup(args.path, occupant=runtime.provenance.occupant)
         print(message)
         return 0 if ok else 1
     if args.command == "backup" and args.backup_command == "restore":
-        restored = restore_backup(args.path, args.to_home)
+        restored = restore_backup(args.path, args.to_home, occupant=runtime.provenance.occupant)
         print(f"Backup restored and verified: {restored}")
         return 0
     if args.command == "repair" and args.repair_command == "rebuild-projections":
