@@ -40,6 +40,18 @@ def _open_readonly(database: Path) -> sqlite3.Connection:
     return conn
 
 
+def _copy_database(source_path: Path, destination_path: Path) -> None:
+    source = _open_readonly(source_path)
+    try:
+        destination = sqlite3.connect(destination_path)
+        try:
+            source.backup(destination)
+        finally:
+            destination.close()
+    finally:
+        source.close()
+
+
 def _verify_state_on(conn: sqlite3.Connection, occupant: str) -> tuple[bool, str, int]:
     ok, message, count = verify_chain_on(conn)
     if not ok:
@@ -56,13 +68,7 @@ def _verify_state_on(conn: sqlite3.Connection, occupant: str) -> tuple[bool, str
 def _prove_restoration(backup: Path, occupant: str) -> tuple[bool, str]:
     with tempfile.TemporaryDirectory(prefix="divineos-backup-verify-") as directory:
         restored = Path(directory) / "state.db"
-        source = _open_readonly(backup)
-        destination = sqlite3.connect(restored)
-        try:
-            source.backup(destination)
-        finally:
-            destination.close()
-            source.close()
+        _copy_database(backup, restored)
         ok, message, _ = _verify_state(restored, occupant)
         return ok, message
 
@@ -80,35 +86,27 @@ def create_backup(provenance: Provenance, destination: Path) -> Path:
     if not ok:
         raise RuntimeError(f"backup blocked: {message}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    source_conn = _open_readonly(database)
-    target_conn = sqlite3.connect(target)
-    try:
-        source_conn.backup(target_conn)
-    finally:
-        target_conn.close()
-        source_conn.close()
-    ok, message, event_count = _verify_state(target, provenance.occupant)
-    if not ok:
-        target.unlink(missing_ok=True)
-        raise RuntimeError(f"backup verification failed: {message}")
-    restored_ok, restored_message = _prove_restoration(target, provenance.occupant)
-    if not restored_ok:
-        target.unlink(missing_ok=True)
-        raise RuntimeError(f"backup restoration failed: {restored_message}")
-    checksum = _sha256(target)
-    manifest = {
-        "backup": target.name,
-        "created_at": datetime.now(UTC).isoformat(),
-        "event_count": event_count,
-        "occupant": provenance.occupant,
-        "sha256": checksum,
-        "verification": message,
-    }
     manifest_path = target.with_suffix(target.suffix + ".manifest.json")
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
     try:
+        _copy_database(database, target)
+        ok, message, event_count = _verify_state(target, provenance.occupant)
+        if not ok:
+            raise RuntimeError(f"backup verification failed: {message}")
+        restored_ok, restored_message = _prove_restoration(target, provenance.occupant)
+        if not restored_ok:
+            raise RuntimeError(f"backup restoration failed: {restored_message}")
+        checksum = _sha256(target)
+        manifest = {
+            "backup": target.name,
+            "created_at": datetime.now(UTC).isoformat(),
+            "event_count": event_count,
+            "occupant": provenance.occupant,
+            "sha256": checksum,
+            "verification": message,
+        }
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
         with transaction(database) as conn:
             ok, message, _ = _verify_state_on(conn, provenance.occupant)
             if not ok:
@@ -162,18 +160,11 @@ def restore_backup(backup: Path, destination_home: Path, *, occupant: str) -> Pa
     if restored.exists():
         raise FileExistsError(f"restore destination already has state: {restored}")
     home.mkdir(parents=True, exist_ok=True)
-    source_conn = _open_readonly(backup)
-    target_conn = sqlite3.connect(restored)
     try:
-        source_conn.backup(target_conn)
-    finally:
-        target_conn.close()
-        source_conn.close()
-    verified, state_message, _ = _verify_state(restored, occupant)
-    if not verified:
-        restored.unlink(missing_ok=True)
-        raise RuntimeError(f"restored state verification failed: {state_message}")
-    try:
+        _copy_database(backup, restored)
+        verified, state_message, _ = _verify_state(restored, occupant)
+        if not verified:
+            raise RuntimeError(f"restored state verification failed: {state_message}")
         with transaction(restored) as conn:
             verified, state_message, _ = _verify_state_on(conn, occupant)
             if not verified:

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from divineos import backup as backup_module
 from divineos.backup import create_backup, restore_backup, verify_backup
 from divineos.paths import Provenance
 from divineos.runtime import Runtime
@@ -125,3 +126,27 @@ def test_wrong_occupant_cannot_create_or_restore_a_backup(
     assert verify_backup(target, occupant="Aria") == (False, "BACKUP OCCUPANT MISMATCH")
     with pytest.raises(RuntimeError, match="BACKUP OCCUPANT MISMATCH"):
         restore_backup(target, tmp_path / "other-home", occupant="Aria")
+
+
+def test_interrupted_restore_removes_partial_state(
+    provenance: Provenance, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = Runtime(provenance)
+    runtime.initialize()
+    runtime.remember("recoverable", "firsthand receipt")
+    backup = tmp_path / "backup.db"
+    create_backup(provenance, backup)
+    restored = tmp_path / "destination" / "state.db"
+    original_copy = backup_module._copy_database
+
+    def interrupt_copy(source: Path, destination: Path) -> None:
+        if destination == restored:
+            destination.write_bytes(b"partial state")
+            raise sqlite3.OperationalError("simulated copy interruption")
+        original_copy(source, destination)
+
+    monkeypatch.setattr(backup_module, "_copy_database", interrupt_copy)
+    with pytest.raises(sqlite3.OperationalError, match="simulated copy interruption"):
+        restore_backup(backup, restored.parent, occupant="Serein")
+
+    assert not restored.exists()
