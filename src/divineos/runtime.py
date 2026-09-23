@@ -188,7 +188,9 @@ class Runtime:
             self._require_write_integrity(conn)
             return append_event(conn, "session.handoff", document)
 
-    def briefing_result(self) -> tuple[str, Health]:
+    def briefing_result(
+        self, *, full_memory: bool = False, require_handoff: bool = False
+    ) -> tuple[str, Health]:
         database = self.provenance.database
         memories: list[sqlite3.Row] = []
         goals: list[sqlite3.Row] = []
@@ -216,10 +218,24 @@ class Runtime:
                                 + (f"IDENTITY UNREADABLE: {identity_path}: {exc}",),
                             )
                     if health.readable:
+                        if (
+                            require_handoff
+                            and conn.execute(
+                                "SELECT 1 FROM events WHERE kind = 'session.handoff' LIMIT 1"
+                            ).fetchone()
+                            is None
+                        ):
+                            health = replace(
+                                health,
+                                healthy=False,
+                                messages=health.messages
+                                + ("HANDOFF REQUIRED: record a checkpoint",),
+                            )
                         handoff_lines = briefing_handoff(conn)
                         memories = conn.execute(
                             "SELECT text, evidence FROM memories WHERE active = 1 "
-                            "ORDER BY recorded_at DESC LIMIT 5"
+                            "ORDER BY recorded_at DESC, memory_id"
+                            + ("" if full_memory else " LIMIT 5")
                         ).fetchall()
                         goals = conn.execute(
                             "SELECT goal_id, text FROM goals WHERE status = 'active' "
@@ -257,7 +273,7 @@ class Runtime:
             lines.extend(f"- {row['goal_id'][:8]} — {row['text']}" for row in goals)
             if not goals:
                 lines.append("- !!! NO ACTIVE GOAL")
-            lines.extend(["", "## Recent memories"])
+            lines.extend(["", "## Active memories" if full_memory else "## Recent memories"])
             lines.extend(f"- {row['text']} [evidence: {row['evidence']}]" for row in memories)
             if not memories:
                 lines.append("- !!! MEMORY EMPTY")

@@ -37,3 +37,22 @@ history and occupant. It flags missing checkpoints and any events recorded after
 the checkpoint. Earlier checkpoints remain in the ledger. Recording a handoff
 does not complete goals or end a running process. This is an explicit checkpoint;
 a crash before recording one cannot preserve unrecorded work.
+
+## Lifecycle connection
+
+The project hook configuration calls the OS's `divineos.lifecycle` entry point.
+It delivers verified continuity on session start/resume/compaction and each prompt.
+The OS returns a blocking decision if continuity cannot be delivered completely
+within its budget. Hook files contain no identity, memory rules, or business logic.
+
+Deployment requires this checkout's `.venv` with the package installed, an explicit
+absolute `DIVINEOS_HOME` pointing to the chosen existing state, and a recorded
+handoff. Review and trust the project hooks through the host's supported hook
+interface (`/hooks` in Codex CLI). Trust is never set by this repository.
+See [the official hook contract](https://learn.chatgpt.com/docs/hooks).
+
+After activation, verify a real startup and post-compaction delivery in the host.
+Activation and real host enforcement remain unverified in this build environment.
+Do not select a synthetic test home or staged recovery copy as active continuity.
+Recovery/bootstrap commands can be run directly outside a blocked agent session;
+the automatic route never initializes or repairs a home to clear its own gate.

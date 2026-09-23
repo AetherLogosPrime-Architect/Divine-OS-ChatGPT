@@ -89,3 +89,33 @@ briefing fail and withhold continuity. The file is versioned in Git, separate
 from the event ledger; ledger verification does not authenticate its contents.
 This makes standing corrections available on startup. Applying natural-language
 instructions still requires the agent's judgment; this is not a speech filter.
+
+## Lifecycle delivery and enforcement boundary
+
+`.codex/hooks.json` contains event routing, a command, and transport settings only.
+It invokes `divineos.lifecycle` from this checkout's virtual environment. All
+validation, context selection, size limits, and stop decisions live in the OS.
+Session startup, resume, clear, and post-compaction startup use the same route;
+each submitted prompt rechecks and reloads continuity.
+
+The OS requires an explicitly selected absolute `DIVINEOS_HOME`, matching source
+and target repositories, healthy continuity, and an existing handoff. It loads
+identity, goals, all active memories, and the latest handoff in the briefing's
+verified database snapshot. It never creates state. Missing or invalid state
+returns `continue: false`; prompt events additionally return `decision: block`.
+Delivery exceeding 24,000 UTF-8 bytes is blocked rather than silently truncated.
+The hook's context limit is disabled only because the OS enforces this size cap.
+This bounded first version does not implement semantic retrieval of old events.
+
+Tests execute the configured command in fresh processes against synthetic state.
+They verify delivery and blocking responses, not host enforcement. Trusted hook
+activation and an observed real lifecycle event are separate deployment gates.
+There is no Codex CLI available in the current build environment and no active
+runtime home selected. The hooks have not been demonstrated firing here.
+Host skipping, timeouts, interpreter/import failures, and hooks disabled by the
+host remain outside this Python gate's control. Do not call this universal
+fail-closed enforcement. No trust records are edited or bypassed by this build.
+
+The adapter does not synthesize decisions or handoffs from transcripts. Requiring
+judgment receipts before completing work is a separate future OS workflow; this
+slice enforces continuity delivery at its supported lifecycle boundaries only.
