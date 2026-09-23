@@ -13,9 +13,12 @@ from typing import Any, Iterator
 GENESIS_HASH = "0" * 64
 
 
-def connect(database: Path) -> sqlite3.Connection:
-    database.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(database)
+def connect(database: Path, *, create: bool = True) -> sqlite3.Connection:
+    if create:
+        database.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(database)
+    else:
+        conn = sqlite3.connect(database.resolve().as_uri() + "?mode=rw", uri=True)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
@@ -24,7 +27,8 @@ def connect(database: Path) -> sqlite3.Connection:
 
 @contextmanager
 def read_connection(database: Path) -> Iterator[sqlite3.Connection]:
-    conn = connect(database)
+    conn = sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
     try:
         yield conn
     finally:
@@ -32,7 +36,8 @@ def read_connection(database: Path) -> Iterator[sqlite3.Connection]:
 
 
 def initialize(database: Path) -> None:
-    with read_connection(database) as conn:
+    conn = connect(database)
+    try:
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS events (
@@ -60,6 +65,8 @@ def initialize(database: Path) -> None:
             );
             """
         )
+    finally:
+        conn.close()
 
 
 def _canonical(payload: dict[str, Any]) -> str:
@@ -75,8 +82,9 @@ def _event_hash(
 
 @contextmanager
 def transaction(database: Path) -> Iterator[sqlite3.Connection]:
-    initialize(database)
-    conn = connect(database)
+    if not database.is_file():
+        raise FileNotFoundError(f"STATE STORE MISSING: {database}")
+    conn = connect(database, create=False)
     try:
         conn.execute("BEGIN IMMEDIATE")
         yield conn

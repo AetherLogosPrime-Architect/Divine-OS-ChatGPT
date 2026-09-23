@@ -49,6 +49,15 @@ update its projection together. The briefing verifies the chain before using
 the projections. If verification fails, the briefing says so and exits
 unhealthy.
 
+## Cold-start contract
+
+Only `divineos init` creates a state store. Status and briefing open an existing
+store read-only and report the resolved repository, interpreter, data home, and
+database. A missing, incomplete, or unreadable store remains untouched and is
+reported as such. An existing store cannot be initialized over an integrity or
+occupant failure. The briefing checks the ledger, occupant, projections, goals,
+and memories from one database snapshot.
+
 ## Deliberately absent
 
 Council lenses, semantic retrieval, dreams, sleep, family messaging, affect,

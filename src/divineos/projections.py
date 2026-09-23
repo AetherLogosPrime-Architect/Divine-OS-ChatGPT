@@ -9,7 +9,6 @@ from divineos.store import (
     append_event,
     read_connection,
     transaction,
-    verify_chain,
     verify_chain_on,
     verify_occupant,
 )
@@ -79,10 +78,13 @@ def actual_state_on(conn: sqlite3.Connection) -> ProjectionState:
 
 
 def verify_projections(database: Path) -> tuple[bool, str]:
-    ok, message, _ = verify_chain(database)
-    if not ok:
-        return False, message
+    if not database.is_file():
+        return False, "STATE STORE MISSING"
     with read_connection(database) as conn:
+        conn.execute("BEGIN")
+        ok, message, _ = verify_chain_on(conn)
+        if not ok:
+            return False, message
         return verify_projections_on(conn)
 
 

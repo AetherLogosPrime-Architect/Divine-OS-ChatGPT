@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from divineos.backup import create_backup, restore_backup, verify_backup
@@ -39,18 +40,30 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _run(argv)
+    except (FileNotFoundError, RuntimeError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+
+def _run(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     runtime = Runtime()
     if args.command == "init":
         runtime.initialize()
         print(f"Initialized {runtime.provenance.database}")
         return 0
-    runtime.initialize()
     if args.command == "briefing":
-        print(runtime.briefing())
-        return 0 if runtime.health().healthy else 1
+        briefing, health = runtime.briefing_result()
+        print(briefing)
+        return 0 if health.healthy else 1
     if args.command == "status":
         health = runtime.health()
+        print(f"Repository: {runtime.provenance.repo}")
+        print(f"Interpreter: {runtime.provenance.interpreter}")
+        print(f"Data home: {runtime.provenance.home}")
+        print(f"Database: {runtime.provenance.database}")
         print("\n".join(health.messages))
         return 0 if health.healthy else 1
     if args.command == "remember":
