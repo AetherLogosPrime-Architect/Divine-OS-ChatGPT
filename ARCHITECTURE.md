@@ -79,3 +79,13 @@ of ledger corruption. The event hash verifies stored content, not the truth of
 an author's claims or the availability of referenced evidence. Deletion of an
 entire trailing ledger suffix cannot be detected without an independent retained
 checkpoint; this feature does not add such an external trust anchor.
+
+## Loading standing corrections
+
+`AGENTS.md` directs the agent to read `SEREIN.md` before repository work. The
+briefing also includes that file's full text and source path after verifying
+state ownership and integrity. Empty or unreadable identity text makes the
+briefing fail and withhold continuity. The file is versioned in Git, separate
+from the event ledger; ledger verification does not authenticate its contents.
+This makes standing corrections available on startup. Applying natural-language
+instructions still requires the agent's judgment; this is not a speech filter.

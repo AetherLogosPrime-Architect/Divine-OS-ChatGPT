@@ -105,3 +105,24 @@ def test_briefing_reads_one_verified_snapshot_during_concurrent_drift(
     assert "later drift" not in briefing
     monkeypatch.setattr(runtime_module, "verify_projections_on", original_verify)
     assert "PROJECTION DRIFT" in runtime.briefing()
+
+
+def test_briefing_loads_identity_and_refuses_unreadable_identity(provenance: Provenance) -> None:
+    runtime = Runtime(provenance)
+    runtime.initialize()
+    runtime.remember("private continuity", "receipt")
+    identity = provenance.repo / "SEREIN.md"
+    identity.write_text("I take responsibility for my corrections.\n", encoding="utf-8")
+    briefing, health = Runtime(provenance).briefing_result()
+    assert health.healthy
+    assert identity.read_text() in briefing
+    assert str(identity) in briefing
+    assert "outside ledger" in briefing
+
+    for invalid in (b"", b"\xff"):
+        identity.write_bytes(invalid)
+        briefing, health = Runtime(provenance).briefing_result()
+        assert not health.healthy
+        assert "IDENTITY UNREADABLE" in briefing
+        assert "CONTINUITY WITHHELD" in briefing
+        assert "private continuity" not in briefing

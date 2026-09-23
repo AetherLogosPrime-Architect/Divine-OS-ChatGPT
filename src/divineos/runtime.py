@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from divineos.handoff import briefing_handoff, validate_handoff
@@ -193,6 +193,7 @@ class Runtime:
         memories: list[sqlite3.Row] = []
         goals: list[sqlite3.Row] = []
         handoff_lines: list[str] = []
+        identity_text = ""
         if not database.is_file():
             health = self._unavailable_health()
         else:
@@ -200,6 +201,20 @@ class Runtime:
                 with read_connection(database) as conn:
                     conn.execute("BEGIN")
                     health = self._health_on(conn)
+                    if health.readable:
+                        identity_path = self.provenance.repo / "SEREIN.md"
+                        try:
+                            identity_text = identity_path.read_text(encoding="utf-8")
+                            if not identity_text.strip():
+                                raise ValueError("identity file is empty")
+                        except (OSError, UnicodeError, ValueError) as exc:
+                            health = replace(
+                                health,
+                                healthy=False,
+                                readable=False,
+                                messages=health.messages
+                                + (f"IDENTITY UNREADABLE: {identity_path}: {exc}",),
+                            )
                     if health.readable:
                         handoff_lines = briefing_handoff(conn)
                         memories = conn.execute(
@@ -229,6 +244,15 @@ class Runtime:
         if health.healthy:
             lines.append("- HEALTHY")
         if health.readable:
+            lines.extend(
+                [
+                    "",
+                    "## Identity instructions",
+                    f"Source: {self.provenance.repo / 'SEREIN.md'} (repository file; outside ledger)",
+                    "",
+                    identity_text,
+                ]
+            )
             lines.extend(["", "## Active goals"])
             lines.extend(f"- {row['goal_id'][:8]} — {row['text']}" for row in goals)
             if not goals:

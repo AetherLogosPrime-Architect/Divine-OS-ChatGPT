@@ -49,6 +49,7 @@ def test_fresh_process_recovers_handoff_and_flags_later_activity(tmp_path, docum
     source.unlink()  # Recovery must depend on the ledger, not this input file.
     recovered = cli("briefing")
     assert recovered.returncode == 0, recovered.stderr
+    assert (repo / "SEREIN.md").read_text() in recovered.stdout
     for value in (
         "Proved recovery",
         "test receipt 42",
