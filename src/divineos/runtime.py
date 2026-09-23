@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from divineos.handoff import briefing_handoff, validate_handoff
 from divineos.paths import Provenance, resolve_provenance
 from divineos.projections import verify_projections_on
 from divineos.store import (
@@ -179,10 +181,18 @@ class Runtime:
                 (completed_at, goal_id),
             )
 
+    def record_handoff(self, payload: object) -> str:
+        # Freeze caller-owned containers before validation and the write transaction.
+        document = validate_handoff(json.loads(json.dumps(payload)))
+        with transaction(self.provenance.database) as conn:
+            self._require_write_integrity(conn)
+            return append_event(conn, "session.handoff", document)
+
     def briefing_result(self) -> tuple[str, Health]:
         database = self.provenance.database
         memories: list[sqlite3.Row] = []
         goals: list[sqlite3.Row] = []
+        handoff_lines: list[str] = []
         if not database.is_file():
             health = self._unavailable_health()
         else:
@@ -191,6 +201,7 @@ class Runtime:
                     conn.execute("BEGIN")
                     health = self._health_on(conn)
                     if health.readable:
+                        handoff_lines = briefing_handoff(conn)
                         memories = conn.execute(
                             "SELECT text, evidence FROM memories WHERE active = 1 "
                             "ORDER BY recorded_at DESC LIMIT 5"
@@ -226,6 +237,7 @@ class Runtime:
             lines.extend(f"- {row['text']} [evidence: {row['evidence']}]" for row in memories)
             if not memories:
                 lines.append("- !!! MEMORY EMPTY")
+            lines.extend(handoff_lines)
         else:
             lines.extend(["", "!!! CONTINUITY WITHHELD: integrity or occupant not verified"])
         return "\n".join(lines), health

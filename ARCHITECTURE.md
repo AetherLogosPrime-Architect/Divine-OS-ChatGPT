@@ -64,3 +64,18 @@ Council lenses, semantic retrieval, dreams, sleep, family messaging, affect,
 external hooks, and policy gates are not rejected. They are deferred until the
 continuity spine is proven. Each will enter as one bounded capability with a
 live-route test and an explicit removal condition.
+
+## Session handoff contract
+
+A `session.handoff` event stores completed work with evidence, unfinished work,
+blockers, decisions with reasons, and the next step. It uses the existing write
+integrity gate and transaction. No additional database or schema migration is
+needed; the ledger itself is the handoff's authoritative read source.
+
+The briefing reads the latest checkpoint in its existing verified snapshot.
+Malformed handoff events fail continuity verification, including backup checks.
+Missing checkpoints and later ledger activity are visible warnings, not claims
+of ledger corruption. The event hash verifies stored content, not the truth of
+an author's claims or the availability of referenced evidence. Deletion of an
+entire trailing ledger suffix cannot be detected without an independent retained
+checkpoint; this feature does not add such an external trust anchor.

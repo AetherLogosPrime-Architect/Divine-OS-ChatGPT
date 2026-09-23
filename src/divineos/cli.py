@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -15,6 +16,10 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("init")
     sub.add_parser("briefing")
     sub.add_parser("status")
+    handoff = sub.add_parser("handoff")
+    handoff_sub = handoff.add_subparsers(dest="handoff_command", required=True)
+    handoff_record = handoff_sub.add_parser("record")
+    handoff_record.add_argument("path", type=Path)
     remember = sub.add_parser("remember")
     remember.add_argument("text")
     remember.add_argument("--evidence", required=True)
@@ -42,7 +47,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     try:
         return _run(argv)
-    except (FileNotFoundError, RuntimeError) as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
@@ -66,6 +71,11 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"Database: {runtime.provenance.database}")
         print("\n".join(health.messages))
         return 0 if health.healthy else 1
+    if args.command == "handoff":
+        payload = json.loads(args.path.read_text(encoding="utf-8"))
+        event_id = runtime.record_handoff(payload)
+        print(f"Handoff recorded: {event_id}")
+        return 0
     if args.command == "remember":
         memory_id = runtime.remember(args.text, args.evidence)
         print(f"Memory recorded: {memory_id}")

@@ -5,6 +5,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
+from divineos.handoff import validate_handoff
 from divineos.store import (
     append_event,
     read_connection,
@@ -33,7 +34,9 @@ def expected_state_on(conn: sqlite3.Connection) -> ProjectionState:
     ).fetchall()
     for event in events:
         payload = json.loads(event["payload_json"])
-        if event["kind"] == "memory.recorded":
+        if event["kind"] == "session.handoff":
+            validate_handoff(payload)
+        elif event["kind"] == "memory.recorded":
             memory_id = payload["memory_id"]
             memories[memory_id] = (
                 memory_id,
@@ -89,7 +92,11 @@ def verify_projections(database: Path) -> tuple[bool, str]:
 
 
 def verify_projections_on(conn: sqlite3.Connection) -> tuple[bool, str]:
-    if actual_state_on(conn) != expected_state_on(conn):
+    try:
+        expected = expected_state_on(conn)
+    except (ValueError, KeyError, TypeError) as exc:
+        return False, f"EVENT PAYLOAD INVALID: {exc}"
+    if actual_state_on(conn) != expected:
         return False, "PROJECTION DRIFT: memories/goals do not match the ledger"
     return True, "PROJECTIONS VERIFIED"
 
