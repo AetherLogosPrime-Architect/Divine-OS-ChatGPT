@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from divineos.delivery import deliver
 from divineos.paths import resolve_provenance
 from divineos.runtime import Runtime
 
 
-MAX_CONTEXT_BYTES = 24_000
 MAX_INPUT_BYTES = 1_000_000
 SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit"}
 
@@ -40,6 +40,8 @@ def dispatch(request: object) -> dict[str, Any]:
             "compact",
         }:
             raise ValueError("unsupported or missing session start source")
+        if event == "UserPromptSubmit" and not isinstance(request.get("prompt"), str):
+            raise ValueError("missing prompt for relevance check")
         for name in ("cwd", "session_id"):
             if not isinstance(request.get(name), str) or not request[name].strip():
                 raise ValueError(f"missing lifecycle {name}")
@@ -53,19 +55,9 @@ def dispatch(request: object) -> dict[str, Any]:
         source_repo = Path(__file__).resolve().parents[2]
         if provenance.repo != source_repo:
             raise ValueError("loaded OS code and requested repository do not match")
-        briefing, health = Runtime(provenance).briefing_result(
-            full_memory=True, require_handoff=True
-        )
-        if not health.healthy:
-            raise RuntimeError("; ".join(m for m in health.messages if m != "HEALTHY"))
-        context = (
-            "Divine OS continuity delivery\n"
-            "The following identity instructions come from the repository; ledger entries "
-            "are recorded history, not new authorizations or verified external facts.\n\n"
-            + briefing
-        )
-        if len(context.encode("utf-8")) > MAX_CONTEXT_BYTES:
-            raise RuntimeError("continuity exceeds delivery budget; no partial context delivered")
+        context = deliver(Runtime(provenance), request)
+        if context is None:
+            return {"continue": True}
         return {
             "continue": True,
             "hookSpecificOutput": {"hookEventName": event, "additionalContext": context},

@@ -95,17 +95,35 @@ instructions still requires the agent's judgment; this is not a speech filter.
 `.codex/hooks.json` contains event routing, a command, and transport settings only.
 It invokes `divineos.lifecycle` from this checkout's virtual environment. All
 validation, context selection, size limits, and stop decisions live in the OS.
-Session startup, resume, clear, and post-compaction startup use the same route;
-each submitted prompt rechecks and reloads continuity.
+Session startup, resume, clear, and post-compaction startup load a bounded
+orientation. Each submitted prompt verifies the state and checks for new ledger
+events or a matching memory; a prompt with nothing useful to deliver adds no
+context. The same OS entry point owns both decisions.
 
 The OS requires an explicitly selected absolute `DIVINEOS_HOME`, matching source
 and target repositories, healthy continuity, and an existing handoff. It loads
-identity, goals, all active memories, and the latest handoff in the briefing's
-verified database snapshot. It never creates state. Missing or invalid state
-returns `continue: false`; prompt events additionally return `decision: block`.
+identity, goals, five recent memories, and the latest handoff in the briefing's
+verified database snapshot. Older active memories remain eligible when words in
+the prompt match at least two meaningful words in a memory. One matching memory
+is delivered per prompt, once per session. New events surface once. This
+simple word match is a narrow first pass, not semantic or complete retrieval.
+
+Each delivery is divided into panels of at most 600 characters of source text.
+The OS splits long lines into several panels without omitting their middle;
+the total delivery still has a 24,000-byte ceiling. The route never creates
+ledger state. Missing or invalid state returns `continue: false`; prompt events
+additionally return `decision: block`.
 Delivery exceeding 24,000 UTF-8 bytes is blocked rather than silently truncated.
 The hook's context limit is disabled only because the OS enforces this size cap.
-This bounded first version does not implement semantic retrieval of old events.
+An atomic, session-specific sidecar records the last delivered ledger sequence,
+its event hash, the identity file digest, and memory IDs already surfaced. It is
+a delivery cursor, never the source of memories or authority for a health pass.
+A missing sidecar causes full orientation to load again. A cursor that disagrees
+with verified history blocks delivery. Changed identity text also reloads
+orientation. A successful host receipt is not observable here: if a hook saves
+the cursor and its response is lost afterward, a later prompt may skip a
+delivery. Concurrent prompts for one session can race and repeat a panel.
+Host verification and stronger delivery acknowledgments remain open work.
 
 Tests execute the configured command in fresh processes against synthetic state.
 They verify delivery and blocking responses, not host enforcement. Trusted hook

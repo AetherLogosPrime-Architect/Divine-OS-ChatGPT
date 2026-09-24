@@ -41,9 +41,11 @@ a crash before recording one cannot preserve unrecorded work.
 ## Lifecycle connection
 
 The project hook configuration calls the OS's `divineos.lifecycle` entry point.
-It delivers verified continuity on session start/resume/compaction and each prompt.
-The OS returns a blocking decision if continuity cannot be delivered completely
-within its budget. Hook files contain no identity, memory rules, or business logic.
+It delivers an orientation on start, resume, and compaction. On each prompt,
+the OS checks health, then brings forward new history or one relevant saved
+memory. It stays quiet when neither applies. Content is divided into small
+panels without losing text; oversized delivery produces a blocking decision.
+Hook files contain no identity, memory rules, or business logic.
 
 Deployment requires this checkout's `.venv` with the package installed, an explicit
 absolute `DIVINEOS_HOME` pointing to the chosen existing state, and a recorded
