@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/.venv/bin/python\" -I -m divineos.lifecycle",
+            "timeout": 30,
+            "additionalContextLimit": 0
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/.venv/bin/python\" -I -m divineos.lifecycle",
+            "timeout": 30,
+            "additionalContextLimit": 0
+          }
+        ]
+      }
+    ]
+  }
+}
