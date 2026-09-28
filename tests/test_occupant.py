@@ -99,6 +99,46 @@ def test_native_briefing_can_surface_occupants_note(tmp_path):
     assert not result["reports_incomplete"]
 
 
+@requires_source
+def test_example_setup_retains_provenance_and_is_repeatable(tmp_path):
+    state = tmp_path / "adopted"
+    setup = TOOL.parents[1] / "profiles/chatgpt.json"
+    ok(run(state, "bootstrap", "--name", "ChatGPT"))
+    adopted = ok(run(state, "adopt-setup", "--setup", str(setup)))
+    assert adopted["status"] == "applied"
+    assert len(adopted["core"]) == 9
+    assert len(adopted["receipt"]["knowledge_ids"]) == 4
+    entries = ok(run(state, "recall", "--query", "handoff"))["matches"]
+    entry = next(x for x in entries if "early-handoff" in x["content"])
+    assert entry["source"] == "INHERITED"
+    assert entry["maturity"] == "RAW"
+    assert entry["source_entity"] == "DivineOS session-pipeline interruption account"
+    assert entry["source_events"] == [adopted["receipt"]["event_id"]]
+    repeated = ok(run(state, "adopt-setup", "--setup", str(setup)))
+    assert repeated["status"] == "already_applied"
+    assert repeated["receipt"] == adopted["receipt"]
+    assert ok(run(state, "verify"))["chain"]["total"] == 2
+    assert not ok(run(state, "native-briefing"))["reports_incomplete"]
+
+
+@requires_source
+@pytest.mark.parametrize("fault", ["wrong_owner", "missing_reference"])
+def test_bad_setup_does_not_change_core_or_ledger(tmp_path, fault):
+    state = tmp_path / "unchanged"
+    config = json.loads((TOOL.parents[1] / "profiles/chatgpt.json").read_text(encoding="utf-8"))
+    if fault == "wrong_owner":
+        config["name"] = "AnotherOccupant"
+    else:
+        config["lessons"][-1]["references"] = []
+    invalid = tmp_path / "invalid.json"
+    invalid.write_text(json.dumps(config), encoding="utf-8")
+    before = ok(run(state, "bootstrap", "--name", "ChatGPT"))["core"]
+    result = run(state, "adopt-setup", "--setup", str(invalid))
+    assert result.returncode == 1
+    assert ok(run(state, "briefing"))["core"] == before
+    assert ok(run(state, "verify"))["chain"]["total"] == 1
+
+
 @pytest.mark.parametrize("action", ["write", "sqlite", "subprocess"])
 def test_audit_guard_blocks_external_operations_in_real_process(tmp_path, action):
     root = tmp_path / "profile"

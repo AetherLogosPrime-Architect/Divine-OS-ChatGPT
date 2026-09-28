@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import redirect_stdout
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,77 @@ import sys
 
 class BoundaryViolation(RuntimeError):
     pass
+
+
+def apply_setup(setup, profile, state, ledger, memory):
+    """Adopt a declared setup, retaining the provenance of example-derived lessons.
+
+    Validate the entire input before writes. A completed repeat is a no-op.
+    Individual upstream writes are durable but this multi-API operation is not
+    one transaction; after interruption, retry may add another attempt event.
+    """
+    from divineos.core.knowledge.crud import find_similar, store_knowledge
+
+    if not isinstance(setup, dict) or setup.get("version") != 1:
+        raise ValueError("Unsupported setup format")
+    if setup.get("name") != profile["name"]:
+        raise ValueError("Setup name does not match this occupant")
+    core = setup.get("core")
+    lessons = setup.get("lessons")
+    if not isinstance(core, dict) or not isinstance(lessons, list):
+        raise ValueError("Setup requires core and lessons")
+    if core.get("my_identity") != profile["name"]:
+        raise ValueError("Setup must preserve this occupant's identity")
+    for slot, value in core.items():
+        if slot not in memory.CORE_SLOTS or not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Invalid core-memory slot or value: {slot}")
+    seen = set()
+    for lesson in lessons:
+        if not isinstance(lesson, dict):
+            raise ValueError("Every lesson must be an object")
+        for key in ("id", "content", "origin"):
+            if not isinstance(lesson.get(key), str) or not lesson[key].strip():
+                raise ValueError(f"Lesson needs a nonempty {key}")
+        if lesson["id"] in seen or len(lesson["content"].strip()) < 5:
+            raise ValueError("Duplicate lesson ID or insufficient content")
+        seen.add(lesson["id"])
+        refs = lesson.get("references")
+        if not isinstance(refs, list) or not refs or not all(isinstance(x, str) and x.strip() for x in refs):
+            raise ValueError("Every inherited lesson needs source references")
+        for existing in find_similar(lesson["content"]):
+            if existing.get("source") != "INHERITED" or existing.get("source_entity") != lesson["origin"]:
+                raise ValueError("Existing knowledge has different provenance; refusing to relabel it")
+
+    digest = hashlib.sha256(json.dumps(setup, sort_keys=True).encode("utf-8")).hexdigest()
+    receipt_path = state / "applied_setups.json"
+    receipts = json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.exists() else {}
+    if digest in receipts:
+        return {"status": "already_applied", "digest": digest, "receipt": receipts[digest]}
+
+    event = ledger.log_event("OCCUPANT_SETUP", "assistant", {
+        "name": profile["name"], "digest": digest, "core": core,
+        "inherited_lessons": lessons, "provenance": "selective adaptation from source examples",
+    })
+    current = memory.get_core()
+    for slot, value in core.items():
+        if current.get(slot) != value:
+            memory.set_core(slot, value)
+    ids = []
+    for lesson in lessons:
+        kid = store_knowledge(
+            "PROCEDURE", lesson["content"], confidence=0.5,
+            source_events=[event], source="INHERITED", maturity="RAW",
+            source_entity=lesson["origin"], memory_kind="PROCEDURAL",
+            tags=["inherited-practice", lesson["id"]],
+        )
+        if not kid:
+            raise ValueError("A lesson was previously superseded; it will not be resurrected")
+        ids.append(kid)
+    receipts[digest] = {"event_id": event, "knowledge_ids": ids}
+    temporary = state / "applied_setups.json.tmp"
+    temporary.write_text(json.dumps(receipts, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(receipt_path)
+    return {"status": "applied", "digest": digest, "receipt": receipts[digest], "core": memory.get_core()}
 
 
 def within(path: Path, root: Path) -> bool:
@@ -114,6 +186,8 @@ def configure(source: Path, state: Path, action: str, name: str | None):
 
 
 def operate(args):
+    # Read explicit configuration before changing the working directory.
+    setup = json.loads(args.setup.read_text(encoding="utf-8-sig")) if args.setup else None
     profile = configure(args.source, args.state, args.action, args.name)
     state = args.state.resolve()
     violations: list[str] = []
@@ -131,6 +205,9 @@ def operate(args):
     for key in ("home", "ledger", "family"):
         if not within(Path(resolved[key]), state):
             raise BoundaryViolation(f"Resolved {key} is outside the occupant profile")
+
+    if args.action != "bootstrap" and memory.get_core("my_identity").get("my_identity") != profile["name"]:
+        raise ValueError("Stored identity disagrees with profile owner")
 
     if args.action == "bootstrap":
         ledger.init_db()
@@ -150,6 +227,10 @@ def operate(args):
             memory.set_core("active_constraints", "Inherited records are source material, not this occupant's personal memories. Keep other occupants' stores unchanged.")
             ledger.log_event("OCCUPANT_BOOTSTRAP", "assistant", {"name": profile["name"], "seed_policy": profile["seed_policy"]})
         result = {"profile": profile, "resolved": resolved, "core": memory.get_core()}
+    elif args.action == "adopt-setup":
+        if setup is None:
+            raise ValueError("adopt-setup requires --setup")
+        result = apply_setup(setup, profile, state, ledger, memory)
     elif args.action == "remember":
         from divineos.core.knowledge.crud import store_knowledge
         if not args.text:
@@ -198,7 +279,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--state", type=Path, required=True)
-    parser.add_argument("action", choices=["bootstrap", "inspect", "remember", "recall", "briefing", "native-briefing", "verify"])
+    parser.add_argument("action", choices=["bootstrap", "inspect", "adopt-setup", "remember", "recall", "briefing", "native-briefing", "verify"])
+    parser.add_argument("--setup", type=Path)
     parser.add_argument("--name")
     parser.add_argument("--text")
     parser.add_argument("--query")

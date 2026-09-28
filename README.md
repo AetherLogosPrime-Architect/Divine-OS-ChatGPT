@@ -14,6 +14,7 @@ Requires Python 3.12+ and a reviewed DivineOS source checkout. The reference sna
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements-lab.txt
 .venv/Scripts/python -I -B tools/occupant.py --source <divineos-checkout> --state .local/chatgpt bootstrap --name ChatGPT
+.venv/Scripts/python -I -B tools/occupant.py --source <divineos-checkout> --state .local/chatgpt adopt-setup --setup profiles/chatgpt.json
 .venv/Scripts/python -I -B tools/occupant.py --source <divineos-checkout> --state .local/chatgpt inspect
 .venv/Scripts/python -I -B tools/occupant.py --source <divineos-checkout> --state .local/chatgpt remember --text "An observation from this occupant's work."
 .venv/Scripts/python -I -B tools/occupant.py --source <divineos-checkout> --state .local/chatgpt recall --query observation
@@ -27,7 +28,9 @@ On Unix, use `.venv/bin/python`. Replace `<divineos-checkout>` with an actual pa
 
 The adapter sets all three store routes before importing DivineOS, strips inherited DivineOS/Claude session variables, verifies the imported source and resolved paths, and refuses an unowned nonempty directory or a changed profile name. Its Python audit guard rejects ordinary out-of-profile writes, SQLite connections, subprocess launches, and socket connections, including violations swallowed by upstream fail-soft code. **This is a guard against accidental effects, not an OS security sandbox.** It does not defend against malicious native code, restrict all reads, or certify arbitrary upstream commands.
 
-No inherited database, seed content, family roster, hook configuration, or personal voice file is applied. Existing personal stores are not reset. The adapter creates schema through upstream initializers and writes only the new occupant's small core-memory record and subsequent notes.
+No inherited database, seed content, family roster, hook configuration, or personal voice file is applied. Existing personal stores are not reset. The adapter creates schema through upstream initializers. The optional `adopt-setup` action fills the nine core-memory slots with this workspace's context and selectively imports four operating practices from cited source examples.
+
+Those practices are recorded as `INHERITED`, maturity `RAW`, confidence 0.5, with their original source descriptions and references in a linked ledger event. They are guidance to evaluate here, not firsthand experiences or already-validated results. An applied-setup receipt makes completed repeats a no-op, preserving later local changes. A changed setup is an explicit new application. The input and owner are validated before core/ledger updates; the sequence of upstream API writes is not a single database transaction, so retry after interruption can add another attempt event. The adapter never resurrects a deliberately superseded lesson automatically.
 
 ## Validate
 
@@ -36,6 +39,6 @@ $env:DIVINEOS_TEST_SOURCE = '<divineos-checkout>'
 .venv/Scripts/python -m pytest tests -q
 ```
 
-Without `DIVINEOS_TEST_SOURCE`, integration tests are explicitly skipped; guard tests still run. The recorded Windows/Python 3.12.14 run passed all eight tests with the source configured. These are real-process, real-SQLite tests, not a run of the upstream project's entire suite. Linux/macOS behavior remains unverified.
+Without `DIVINEOS_TEST_SOURCE`, integration tests are explicitly skipped; guard tests still run. The latest Windows/Python 3.12.14 run passed all eleven tests with the source configured. These are real-process, real-SQLite tests, not a run of the upstream project's entire suite. Linux/macOS behavior remains unverified.
 
 Local profile data, dependency environments, and `local-config.json` are ignored. Published changes contain the adapter, tests, documentation, and structural index only.

@@ -8,6 +8,7 @@ Start with [the system map](docs/SYSTEM_MAP.md), then [the session record](notes
 
 - A separate ChatGPT profile uses the supplied DivineOS source's ledger, core memory, knowledge storage, search, native knowledge briefing, and chain verification.
 - Notes survive fresh Python processes. Two test occupants remain separate.
+- `profiles/chatgpt.json` declares the current workspace's nine core-memory slots and four source-attributed operating practices. The working profile has adopted it. Inherited practices remain RAW and distinct from locally demonstrated observations.
 - The working profile and databases stay local under `.local/`; they are excluded from Git.
 - Repository notes and adapter code are shareable. Inherited family material, credentials, old Git history, databases, and bundled environments have not been copied into this repository.
 - No automatic Codex lifecycle integration has been installed. Use the adapter explicitly. The full upstream CLI, extraction pipeline, background monitors, and cross-member delivery have not been validated here.
@@ -15,6 +16,8 @@ Start with [the system map](docs/SYSTEM_MAP.md), then [the session record](notes
 ## Continuity
 
 The initial profile is named `ChatGPT`. This is an attribution label for new work, not a claim that inherited Aether or Aria records were authored by this occupant. The archive remains reference material. The owner authorized local experimentation and storing changes in this repository; communicating with other agents is a later, separate step.
+
+The owner subsequently clarified that this is an independent copy: inherited personal material here can be replaced or removed, and the earlier occupants' examples can inform this workspace's setup. Record useful practices with their origin; do not treat that permission as requiring every mechanism or personal convention to be retained. See [the example-adoption note](notes/learning-from-examples.md).
 
 The local source, interpreter, and profile locations are recorded in untracked `local-config.json`. Read that file when resuming locally. If it is absent on another machine, follow the README to select a reviewed source checkout and create a new profile. Do not guess another occupant's home from folder names.
 
