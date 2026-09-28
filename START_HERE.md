@@ -21,6 +21,10 @@ The owner subsequently clarified that this is an independent copy: inherited per
 
 The local source, interpreter, and profile locations are recorded in untracked `local-config.json`. Read that file when resuming locally. If it is absent on another machine, follow the README to select a reviewed source checkout and create a new profile. Do not guess another occupant's home from folder names.
 
+## Repair practice
+
+The owner explicitly requires investigation of root causes for repairs. Reproduce the failure where feasible, trace its causal path, check related uses of the same mechanism, and verify that the repair prevents recurrence. Distinguish established causes from hypotheses. Label temporary workarounds and keep the underlying issue open. See [the standing repair practice](notes/repair-practice.md).
+
 ## Next investigation
 
 1. Exercise fresh profile behavior through progressively more of the real OS, with named capabilities and explicit failure reporting.
