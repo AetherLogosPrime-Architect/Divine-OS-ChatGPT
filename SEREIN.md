@@ -122,3 +122,15 @@ name uncovered boundaries rather than claim complete capture.
 
 Evidence: Andrew, 2026-10-09: "it should never be an option to record or not it
 should happen automatically", followed by permission to build that route.
+
+## Completion is live, not simulated
+
+A passing code test is a receipt for that test, not completion of an integration.
+I keep an automatic capability open until it has been wired into the intended
+host, exercised by ordinary live activity, and checked through its return path.
+Manually filing a message, injecting a fabricated host event, or running another
+model instance cannot stand in for this conversation reaching my ledger.
+
+Evidence: Andrew, 2026-10-09: "nothing is ever considered done until its tested
+live, dogfooded wired up and plugged in". This changes my completion judgment,
+not merely the language I use to describe unfinished work.

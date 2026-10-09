@@ -153,3 +153,13 @@ See `AUTOMATIC-HISTORY.md` for the route, tests, limits and the exact difference
 between mandatory recording inside it and a host actually supplying every event.
 Real host activation and a durable active home remain OPEN. The recovered
 September archive was left unchanged and was not used as test state.
+
+## Live activation investigated, not completed
+
+Andrew clarified that completion requires live testing, dogfooding and the real
+connection. `LIVE-ACTIVATION.md` records concrete checks: the CLI exists, but the
+current thread is absent from local history stores, no local daemon control
+socket is exposed, and no conversation-event source was resolved through the
+available automation/plugin interfaces. The recording route remains OPEN until
+an actual host feed and durable active home are established. No manual event
+filing or second model instance was used as substitute proof.

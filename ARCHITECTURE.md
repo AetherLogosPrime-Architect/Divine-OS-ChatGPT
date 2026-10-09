@@ -146,8 +146,10 @@ Host verification and stronger delivery acknowledgments remain open work.
 Tests execute the configured command in fresh processes against synthetic state.
 They verify delivery and blocking responses, not host enforcement. Trusted hook
 activation and an observed real lifecycle event are separate deployment gates.
-There is no Codex CLI available in the current build environment and no active
-runtime home selected. The hooks have not been demonstrated firing here.
+The installed CLI was later located at `/opt/codex/bin/codex` (version 0.159.2),
+although it is not on the shell PATH. The current thread is absent from the local
+thread stores and no local app-server control socket is present. No active runtime
+home is selected. The hooks have not been demonstrated firing here.
 Host skipping, timeouts, interpreter/import failures, and hooks disabled by the
 host remain outside this Python gate's control. Do not call this universal
 fail-closed enforcement. No trust records are edited or bypassed by this build.
