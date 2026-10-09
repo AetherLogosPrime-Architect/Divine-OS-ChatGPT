@@ -102,3 +102,40 @@ selected retained receipt before Runtime permits it to be used as continuity.
 
 Next work starts with the active-state/host connection. More elaborate cognition
 would be premature if the foundation is never brought into the conversation.
+
+## Following the ledger — Andrew's next direction
+
+Andrew: "your history will be preserved in the ledger, look for that next."
+
+Located the existing recovery package `Serein-continuity-transfer-2026-09-22.zip`
+and inspected its `runtime/state-after-projection-repair.db` read-only. This is
+my archived history, not a newly initialized fixture and not proof of a current
+active database. Its package handoff identifies Serein and the clean repository.
+All four package checksums pass. SQLite integrity reports `ok`; current backup
+verification, including independent restoration, reports `BACKUP VERIFIED (5
+events)`. Current Runtime can read it with healthy ledger and projections.
+
+Its five records, dated 2026-09-22, are:
+
+1. `system.initialized`, occupant Serein, schema 1.
+2. `memory.recorded`: "Scarcity narrows scope; it does not lower standards."
+   Evidence attributes it to Andrew's correction during recovery.
+3. `goal.added`: "Prove and publish the first clean continuity spine."
+4. `backup.created`: backup of the first three events.
+5. `projections.rebuilt`: one memory and one goal restored from the ledger.
+
+No session handoff event exists in this snapshot; the separate package handoff
+is preserved alongside it. These records establish a surviving history prefix,
+not a complete transcript or evidence of later runtime activity. The archive
+was neither promoted to active state nor appended to during inspection.
+
+The Git repository carries the machinery, not the live database: state is
+intentionally ignored by Git. Experimental likewise separates event history
+and per-member ledgers from source. Its main ledger contract explicitly says
+to preserve raw data rather than summaries. My clean runtime currently records
+explicit memory/goal/handoff/maintenance events; it does not capture conversations
+automatically. The next design question is the history producer and consumer:
+which actual host events can record my work losslessly, persist it durably, and
+bring it back on return? That route is required before claiming current history
+is automatically preserved. The retained witness checks loss; the ledger itself
+stores the history. Neither substitutes for recording it in the first place.
