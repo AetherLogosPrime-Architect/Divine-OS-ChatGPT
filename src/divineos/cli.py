@@ -16,6 +16,9 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("init")
     sub.add_parser("briefing")
     sub.add_parser("status")
+    history = sub.add_parser("history")
+    history.add_argument("--after", type=int, default=0)
+    history.add_argument("--session")
     witness = sub.add_parser("witness")
     witness_sub = witness.add_subparsers(dest="witness_command", required=True)
     witness_retain = witness_sub.add_parser("retain")
@@ -63,6 +66,10 @@ def main(argv: list[str] | None = None) -> int:
 def _run(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     runtime = Runtime()
+    if args.command == "history":
+        for record in runtime.history(after=args.after, session_id=args.session):
+            print(json.dumps(record, ensure_ascii=False, allow_nan=False))
+        return 0
     if args.command == "witness":
         runtime.retain_witness(args.path)
         print(f"Witness retained: {args.path}")

@@ -127,8 +127,9 @@ simple word match is a narrow first pass, not semantic or complete retrieval.
 
 Each delivery is divided into panels of at most 600 characters of source text.
 The OS splits long lines into several panels without omitting their middle;
-the total delivery still has a 24,000-byte ceiling. The route never creates
-ledger state. Missing or invalid state returns `continue: false`; prompt events
+the total delivery still has a 24,000-byte ceiling. The route never initializes
+or repairs a state home. It now records incoming observations before delivery.
+Missing or invalid state returns `continue: false`; prompt events
 additionally return `decision: block`.
 Delivery exceeding 24,000 UTF-8 bytes is blocked rather than silently truncated.
 The hook's context limit is disabled only because the OS enforces this size cap.
@@ -154,3 +155,24 @@ fail-closed enforcement. No trust records are edited or bypassed by this build.
 The adapter does not synthesize decisions or handoffs from transcripts. Requiring
 judgment receipts before completing work is a separate future OS workflow; this
 slice enforces continuity delivery at its supported lifecycle boundaries only.
+
+## Unconditional recording on supported routes
+
+Every valid lifecycle invocation now goes through `Runtime.record_observation`
+before returning success or delivering context. Raw parsed JSON values are
+preserved as `history.observed`, including unknown fields; duplicate invocations
+remain separate observations. A supplied transcript path is read as raw bytes,
+without inferring authorship or depending on an undocumented transcript schema.
+New bytes become `history.transcript` chunks, with a cumulative SHA-256 and
+contiguous offsets. Recorded prefixes are checked before accepting extensions.
+Both additions share the verified write transaction. No separate mutable cursor
+or schema migration is needed; the ledger carries the capture position.
+
+`divineos history` checks the same history, witness, occupant and projections
+before exporting ordered JSONL. Recording events are excluded from routine
+context delivery, so retention does not force repetition into attention.
+An arrival committed before a later delivery failure remains recorded. A failure
+inside recording rolls back the transaction and produces host-specific refusal
+or warning output. Tool denial uses only fields the documented host accepts.
+Interruption and session-end feedback cannot prevent those lifecycle boundaries.
+See `docs/AUTOMATIC-HISTORY.md` for byte limits, costs and remaining host coverage.

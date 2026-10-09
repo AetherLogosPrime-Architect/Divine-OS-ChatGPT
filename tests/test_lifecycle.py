@@ -75,7 +75,9 @@ def test_configured_command_delivers_identity_handoff_and_recent_memories(state,
     assert "Observe an actual host lifecycle event" in content
     assert "memory 0 orchard" not in content
     assert "memory 6" in content
-    assert verify_chain(state.provenance.database) == before
+    after = verify_chain(state.provenance.database)
+    assert after[0] and after[2] == before[2] + 1
+    assert state.history()[-1]["payload"]["request"]["source"] == source
 
 
 def test_prompt_hook_rechecks_state_and_blocks_tampering(state):
@@ -122,8 +124,10 @@ def test_prompt_delivers_changes_once_and_stays_quiet_afterward(state):
 def test_relevant_old_memory_is_delivered_once_without_repeating_every_prompt(state):
     assert invoke()["continue"] is True
     request = {
-        "hook_event_name": "UserPromptSubmit", "cwd": str(REPO / "src"),
-        "session_id": "synthetic-test-session", "prompt": "What happened to memory orchard?",
+        "hook_event_name": "UserPromptSubmit",
+        "cwd": str(REPO / "src"),
+        "session_id": "synthetic-test-session",
+        "prompt": "What happened to memory orchard?",
     }
     first = invoke("UserPromptSubmit", request=request)
     assert "memory 1 orchard" in first["hookSpecificOutput"]["additionalContext"]
@@ -154,8 +158,7 @@ def test_changed_identity_reloads_without_a_ledger_event(state):
         identity.write_text(original + "\nI updated my standing instruction.\n", encoding="utf-8")
         result = invoke("UserPromptSubmit")
         assert (
-            "I updated my standing instruction"
-            in result["hookSpecificOutput"]["additionalContext"]
+            "I updated my standing instruction" in result["hookSpecificOutput"]["additionalContext"]
         )
     finally:
         identity.write_text(original, encoding="utf-8")

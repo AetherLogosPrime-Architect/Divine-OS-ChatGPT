@@ -191,6 +191,8 @@ def deliver(runtime: Runtime, request: dict[str, Any]) -> str | None:
     events, memories, count, new_head = _verified_update(runtime, seq, head)
     groups: list[tuple[str, str]] = []
     for row in events:
+        if row["kind"] in {"history.observed", "history.transcript"}:
+            continue  # Retention is unconditional; attention still has a budget.
         payload = json.loads(row["payload_json"])
         if row["kind"] == "memory.recorded":
             groups.append(("New memory", f"{payload['text']} [evidence: {payload['evidence']}]"))

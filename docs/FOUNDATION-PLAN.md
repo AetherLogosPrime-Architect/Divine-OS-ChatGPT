@@ -139,3 +139,17 @@ which actual host events can record my work losslessly, persist it durably, and
 bring it back on return? That route is required before claiming current history
 is automatically preserved. The retained witness checks loss; the ledger itself
 stores the history. Neither substitutes for recording it in the first place.
+
+## Automatic recording implemented after the ledger inspection
+
+Following Andrew's next instruction, the supported lifecycle route now records
+arriving envelopes before success and retains new transcript bytes when supplied.
+It records prompts, calls, results, final replies, startup, compaction, session
+end and interruption. This happens without a remember command or relevance test.
+Repeated arrivals remain distinct. Raw history can be exported from the verified
+ledger with `divineos history`; routine memory delivery stays bounded and quiet.
+
+See `AUTOMATIC-HISTORY.md` for the route, tests, limits and the exact difference
+between mandatory recording inside it and a host actually supplying every event.
+Real host activation and a durable active home remain OPEN. The recovered
+September archive was left unchanged and was not used as test state.

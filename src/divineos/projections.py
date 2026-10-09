@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import base64
+import hashlib
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
 from divineos.handoff import validate_handoff
+from divineos.history import validate_observation
+from divineos.transcript import validate_chunk
 from divineos.witness import verify_witness_on
 from divineos.store import (
     append_event,
@@ -30,12 +34,25 @@ def expected_state(database: Path) -> ProjectionState:
 def expected_state_on(conn: sqlite3.Connection) -> ProjectionState:
     memories: dict[str, tuple[str, str, str, str, int]] = {}
     goals: dict[str, tuple[str, str, str, str, str | None]] = {}
+    transcripts: dict[tuple[str, str], tuple[int, object]] = {}
     events = conn.execute(
         "SELECT occurred_at, kind, payload_json FROM events ORDER BY seq"
     ).fetchall()
     for event in events:
         payload = json.loads(event["payload_json"])
-        if event["kind"] == "session.handoff":
+        if event["kind"] == "history.transcript":
+            validate_chunk(payload)
+            key = (payload["session_id"], payload["path"])
+            offset, digest = transcripts.get(key, (0, hashlib.sha256()))
+            if payload["start"] != offset:
+                raise ValueError("transcript chunk sequence has a gap")
+            digest.update(base64.b64decode(payload["data_base64"], validate=True))
+            if digest.hexdigest() != payload["prefix_sha256"]:
+                raise ValueError("transcript prefix digest mismatch")
+            transcripts[key] = (payload["end"], digest)
+        elif event["kind"] == "history.observed":
+            validate_observation(payload)
+        elif event["kind"] == "session.handoff":
             validate_handoff(payload)
         elif event["kind"] == "memory.recorded":
             memory_id = payload["memory_id"]

@@ -36,7 +36,8 @@ A fresh `divineos briefing` includes the latest checkpoint after verifying the
 history and occupant. It flags missing checkpoints and any events recorded after
 the checkpoint. Earlier checkpoints remain in the ledger. Recording a handoff
 does not complete goals or end a running process. This is an explicit checkpoint;
-a crash before recording one cannot preserve unrecorded work.
+a crash before recording one leaves no authored checkpoint; automatically
+recorded raw history may still survive.
 
 ## Lifecycle connection
 
@@ -46,6 +47,15 @@ the OS checks health, then brings forward new history or one relevant saved
 memory. It stays quiet when neither applies. Content is divided into small
 panels without losing text; oversized delivery produces a blocking decision.
 Hook files contain no identity, memory rules, or business logic.
+
+The lifecycle entry point now records every valid supplied event before it
+allows continuation: startup, prompts, tool calls/results, Stop, compaction,
+session end, and interruption. There is no recording toggle in this route.
+When a transcript path is supplied, new raw bytes are retained in the same
+transaction. Routine recording does not repeat raw history in the briefing.
+Use `divineos history` for a verified JSONL export, optionally filtered with
+`--session SESSION_ID` or `--after SEQUENCE`. See
+[automatic history](docs/AUTOMATIC-HISTORY.md) for coverage and deployment limits.
 
 Relevant older memories are selected by matching words within a paragraph.
 Delivery includes that complete paragraph and its immediate neighbors, the

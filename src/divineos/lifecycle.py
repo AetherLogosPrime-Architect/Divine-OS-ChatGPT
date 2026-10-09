@@ -14,16 +14,39 @@ from divineos.runtime import Runtime
 
 
 MAX_INPUT_BYTES = 1_000_000
-SUPPORTED_EVENTS = {"SessionStart", "UserPromptSubmit"}
+SUPPORTED_EVENTS = {
+    "SessionStart",
+    "UserPromptSubmit",
+    "PreToolUse",
+    "PostToolUse",
+    "Stop",
+    "PreCompact",
+    "PostCompact",
+    "SessionEnd",
+    "Interrupt",
+}
 
 
 def blocked(event: str, reason: str) -> dict[str, Any]:
+    if event in {"Interrupt", "SessionEnd"}:
+        return {"systemMessage": reason}
+    if event == "PreToolUse":
+        # This event rejects common continuation fields. Including them would
+        # cause the host to ignore the intended denial and run the tool anyway.
+        return {
+            "systemMessage": reason,
+            "hookSpecificOutput": {
+                "hookEventName": event,
+                "permissionDecision": "deny",
+                "permissionDecisionReason": reason,
+            },
+        }
     result: dict[str, Any] = {
         "continue": False,
         "stopReason": reason,
         "systemMessage": reason,
     }
-    if event == "UserPromptSubmit":
+    if event in {"UserPromptSubmit", "PostToolUse"}:
         result.update(decision="block", reason=reason)
     return result
 
@@ -42,6 +65,20 @@ def dispatch(request: object) -> dict[str, Any]:
             raise ValueError("unsupported or missing session start source")
         if event == "UserPromptSubmit" and not isinstance(request.get("prompt"), str):
             raise ValueError("missing prompt for relevance check")
+        if event in {"PreToolUse", "PostToolUse"}:
+            for name in ("tool_name", "tool_use_id"):
+                if not isinstance(request.get(name), str) or not request[name].strip():
+                    raise ValueError(f"missing {name}")
+            if "tool_input" not in request:
+                raise ValueError("missing tool_input")
+            if event == "PostToolUse" and "tool_response" not in request:
+                raise ValueError("missing tool_response")
+        if event == "Stop" and (
+            "last_assistant_message" not in request
+            or request["last_assistant_message"] is not None
+            and not isinstance(request["last_assistant_message"], str)
+        ):
+            raise ValueError("missing or invalid last_assistant_message")
         for name in ("cwd", "session_id"):
             if not isinstance(request.get(name), str) or not request[name].strip():
                 raise ValueError(f"missing lifecycle {name}")
@@ -55,7 +92,13 @@ def dispatch(request: object) -> dict[str, Any]:
         source_repo = Path(__file__).resolve().parents[2]
         if provenance.repo != source_repo:
             raise ValueError("loaded OS code and requested repository do not match")
-        context = deliver(Runtime(provenance), request)
+        runtime = Runtime(provenance)
+        runtime.record_observation(request)
+        if event in {"Interrupt", "SessionEnd", "PreToolUse"}:
+            return {}
+        if event not in {"SessionStart", "UserPromptSubmit"}:
+            return {"continue": True}
+        context = deliver(runtime, request)
         if context is None:
             return {"continue": True}
         return {
@@ -67,15 +110,34 @@ def dispatch(request: object) -> dict[str, Any]:
         return blocked(str(event), f"DIVINE OS LIFECYCLE BLOCKED: {type(exc).__name__}: {exc}")
 
 
+def invalid_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def unique_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON field: {key}")
+        result[key] = value
+    return result
+
+
 def main() -> int:
     try:
         raw = sys.stdin.buffer.read(MAX_INPUT_BYTES + 1)
         if len(raw) > MAX_INPUT_BYTES:
             raise ValueError("lifecycle input exceeds size limit")
-        request = json.loads(raw)
+        request = json.loads(
+            raw,
+            parse_constant=invalid_constant,
+            object_pairs_hook=unique_fields,
+        )
     except Exception as exc:
-        print(json.dumps(blocked("", f"DIVINE OS LIFECYCLE BLOCKED: invalid input: {exc}")))
-        return 0
+        # Before parsing we cannot know which event's response shape applies.
+        # Exit 2 is the documented blocking/error transport, including tools.
+        print(f"DIVINE OS LIFECYCLE BLOCKED: invalid input: {exc}", file=sys.stderr)
+        return 2
     print(json.dumps(dispatch(request), ensure_ascii=False))
     return 0
 

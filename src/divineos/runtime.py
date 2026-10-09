@@ -8,6 +8,8 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from divineos.handoff import briefing_handoff, validate_handoff
+from divineos.history import validate_observation
+from divineos.transcript import retain_transcript_on
 from divineos.paths import Provenance, resolve_provenance
 from divineos.projections import verify_projections_on
 from divineos.witness import create_witness_on, validate_location, verify_witness_on
@@ -164,6 +166,64 @@ class Runtime:
                 (memory_id, recorded_at, clean_text, clean_evidence),
             )
         return memory_id
+
+    def record_observation(self, request: dict) -> str:
+        # Freeze the whole supplied JSON value. No text extraction, trimming,
+        # relevance selection, summarizing, or inference of human authorship.
+        payload = validate_observation(
+            json.loads(
+                json.dumps(
+                    {
+                        "source": "codex-hook",
+                        "request": request,
+                    },
+                    allow_nan=False,
+                )
+            )
+        )
+        request = payload["request"]
+        with transaction(self.provenance.database) as conn:
+            self._require_write_integrity(conn)
+            transcript = request.get("transcript_path")
+            if transcript is not None:
+                if not isinstance(transcript, str) or not transcript:
+                    raise ValueError("invalid transcript_path")
+                retain_transcript_on(conn, request["session_id"], Path(transcript))
+            return append_event(conn, "history.observed", payload)
+
+    def history(self, *, after: int = 0, session_id: str | None = None) -> list[dict]:
+        if after < 0:
+            raise ValueError("history sequence cannot be negative")
+        with read_connection(self.provenance.database) as conn:
+            conn.execute("BEGIN")
+            health = self._health_on(conn)
+            if not health.readable:
+                raise RuntimeError("; ".join(health.messages))
+            result = []
+            for row in conn.execute("SELECT * FROM events WHERE seq > ? ORDER BY seq", (after,)):
+                payload = json.loads(row["payload_json"])
+                if session_id is not None and (
+                    row["kind"] not in {"history.observed", "history.transcript"}
+                    or (
+                        payload["request"]["session_id"]
+                        if row["kind"] == "history.observed"
+                        else payload["session_id"]
+                    )
+                    != session_id
+                ):
+                    continue
+                result.append(
+                    {
+                        "seq": row["seq"],
+                        "event_id": row["event_id"],
+                        "recorded_at": row["occurred_at"],
+                        "kind": row["kind"],
+                        "payload": payload,
+                        "event_hash": row["event_hash"],
+                        "prev_hash": row["prev_hash"],
+                    }
+                )
+            return result
 
     def memory(self, memory_id: str) -> dict[str, str]:
         """Read a full memory from the same snapshot whose integrity was checked."""
