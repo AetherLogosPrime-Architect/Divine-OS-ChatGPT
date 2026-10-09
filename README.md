@@ -47,6 +47,14 @@ memory. It stays quiet when neither applies. Content is divided into small
 panels without losing text; oversized delivery produces a blocking decision.
 Hook files contain no identity, memory rules, or business logic.
 
+Relevant older memories are selected by matching words within a paragraph.
+Delivery includes that complete paragraph and its immediate neighbors, the
+source character range, evidence, and a `divineos memory show MEMORY_ID` command
+to read the unchanged full source after an integrity check. This is lexical
+retrieval, not semantic understanding: distant qualifications may remain outside
+the excerpt. New memories and startup orientation still deliver their full text.
+Oversized paragraphs are split into panels, never silently clipped.
+
 Deployment requires this checkout's `.venv` with the package installed, an explicit
 absolute `DIVINEOS_HOME` pointing to the chosen existing state, and a recorded
 handoff. Review and trust the project hooks through the host's supported hook

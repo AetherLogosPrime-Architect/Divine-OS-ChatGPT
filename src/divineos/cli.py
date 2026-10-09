@@ -23,6 +23,10 @@ def _parser() -> argparse.ArgumentParser:
     remember = sub.add_parser("remember")
     remember.add_argument("text")
     remember.add_argument("--evidence", required=True)
+    memory = sub.add_parser("memory")
+    memory_sub = memory.add_subparsers(dest="memory_command", required=True)
+    memory_show = memory_sub.add_parser("show")
+    memory_show.add_argument("memory_id")
     goal = sub.add_parser("goal")
     goal_sub = goal.add_subparsers(dest="goal_command", required=True)
     goal_add = goal_sub.add_parser("add")
@@ -79,6 +83,9 @@ def _run(argv: list[str] | None = None) -> int:
     if args.command == "remember":
         memory_id = runtime.remember(args.text, args.evidence)
         print(f"Memory recorded: {memory_id}")
+        return 0
+    if args.command == "memory":
+        print(json.dumps(runtime.memory(args.memory_id), ensure_ascii=False, indent=2))
         return 0
     if args.command == "goal" and args.goal_command == "add":
         goal_id = runtime.add_goal(args.text)

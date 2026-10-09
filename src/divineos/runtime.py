@@ -144,6 +144,21 @@ class Runtime:
             )
         return memory_id
 
+    def memory(self, memory_id: str) -> dict[str, str]:
+        """Read a full memory from the same snapshot whose integrity was checked."""
+        with read_connection(self.provenance.database) as conn:
+            conn.execute("BEGIN")
+            health = self._health_on(conn)
+            if not health.readable:
+                raise RuntimeError("; ".join(health.messages))
+            row = conn.execute(
+                "SELECT memory_id, text, evidence FROM memories WHERE memory_id = ? AND active = 1",
+                (memory_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"active memory not found: {memory_id}")
+            return dict(row)
+
     def add_goal(self, text: str) -> str:
         clean = text.strip()
         if not clean:

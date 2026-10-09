@@ -17,8 +17,24 @@ from divineos.store import read_connection
 PANEL_CHARS = 600
 CONTEXT_BYTES = 24_000
 STOPWORDS = {
-    "about", "after", "again", "and", "are", "for", "from", "have", "into",
-    "that", "the", "this", "what", "when", "where", "with", "work", "your",
+    "about",
+    "after",
+    "again",
+    "and",
+    "are",
+    "for",
+    "from",
+    "have",
+    "into",
+    "that",
+    "the",
+    "this",
+    "what",
+    "when",
+    "where",
+    "with",
+    "work",
+    "your",
 }
 
 
@@ -76,9 +92,27 @@ def _save(runtime: Runtime, session_id: str, state: dict[str, Any]) -> None:
 
 def _words(value: str) -> set[str]:
     return {
-        word for word in re.findall(r"[a-z0-9]+", value.lower())
+        word
+        for word in re.findall(r"[a-z0-9]+", value.lower())
         if len(word) > 3 and word not in STOPWORDS
     }
+
+
+def relevant_passage(content: str, terms: set[str]) -> tuple[int, int] | None:
+    """Select a complete matching paragraph with its immediate context.
+
+    Offsets refer to the unchanged source. This is lexical retrieval, not a
+    claim that all qualifications elsewhere in the memory have been included.
+    Never clip a paragraph merely to make it fit a panel.
+    """
+    paragraphs = list(re.finditer(r"\S[\s\S]*?(?=\n[ \t]*\r?\n|\Z)", content))
+    scores = [len(terms & _words(part.group())) for part in paragraphs]
+    if not scores or max(scores) < 2:
+        return None
+    best = max(range(len(scores)), key=scores.__getitem__)
+    first = paragraphs[max(0, best - 1)].start()
+    last = paragraphs[min(len(paragraphs) - 1, best + 1)].end()
+    return first, last
 
 
 def _verified_update(
@@ -147,7 +181,9 @@ def deliver(runtime: Runtime, request: dict[str, Any]) -> str | None:
     head = marker.get("head")
     seen = marker.get("seen")
     if (
-        type(seq) is not int or seq < 1 or not isinstance(head, str)
+        type(seq) is not int
+        or seq < 1
+        or not isinstance(head, str)
         or not isinstance(seen, list)
         or not all(isinstance(item, str) for item in seen)
     ):
@@ -164,29 +200,46 @@ def deliver(runtime: Runtime, request: dict[str, Any]) -> str | None:
         elif row["kind"] == "goal.completed":
             groups.append(("Completed goal", payload["text"]))
         elif row["kind"] == "session.handoff":
-            groups.append((
-                "New handoff",
-                f"Next step: {payload['next_step']}. "
-                f"Unfinished: {', '.join(payload['unfinished']) or 'none'}. "
-                f"Blocked: {', '.join(payload['blocked']) or 'none'}.",
-            ))
+            groups.append(
+                (
+                    "New handoff",
+                    f"Next step: {payload['next_step']}. "
+                    f"Unfinished: {', '.join(payload['unfinished']) or 'none'}. "
+                    f"Blocked: {', '.join(payload['blocked']) or 'none'}.",
+                )
+            )
         else:
-            groups.append((
-                "History changed",
-                f"Verified event {row['seq']}: {row['kind']}. "
-                "Run divineos briefing for detail.",
-            ))
+            groups.append(
+                (
+                    "History changed",
+                    f"Verified event {row['seq']}: {row['kind']}. "
+                    "Run divineos briefing for detail.",
+                )
+            )
     terms = _words(request.get("prompt", ""))
     if terms:
         for row in memories:
             if row["memory_id"] in seen:
                 continue
-            if len(terms & _words(row["text"])) >= 2:
-                groups.append(("Relevant memory", f"{row['text']} [evidence: {row['evidence']}]"))
+            span = relevant_passage(row["text"], terms)
+            if span is not None:
+                start, end = span
+                excerpt = row["text"][start:end]
+                groups.append(
+                    (
+                        "Relevant memory",
+                        f"{excerpt}\n[Memory: {row['memory_id']}; source characters "
+                        f"{start}:{end}; evidence: {row['evidence']}]\n"
+                        f"{'Excerpt; other context may exist. ' if start or end < len(row['text']) else ''}"
+                        f"Read the full source: divineos memory show {row['memory_id']}",
+                    )
+                )
                 seen.append(row["memory_id"])
                 break
     context = render(groups) if groups else None
-    _save(runtime, session_id, {
-        "seq": count, "head": new_head, "identity": identity_digest, "seen": seen
-    })
+    _save(
+        runtime,
+        session_id,
+        {"seq": count, "head": new_head, "identity": identity_digest, "seen": seen},
+    )
     return context

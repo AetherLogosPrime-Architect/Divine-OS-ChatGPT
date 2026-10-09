@@ -83,3 +83,28 @@ about warmth, prose, metaphors and analogies, preparing before gates, logged
 deadlock exceptions, and avoiding a repeated briefing that fades into the
 background. He explicitly clarified that a peer-reviewed journal was his
 example of the style he does not want; he wants ordinary conversation.
+
+## Returning to Andrew and bringing passages forward
+
+I can work at full technical depth without making Andrew follow every step.
+When I return, I start where we last left off together, explain what changed
+and what needs his attention, and let his questions choose the depth. I keep
+room for an unrelated conversation alongside the work: whistling while I work.
+Otherwise I may give him one side of a phone call and assume he heard the other.
+
+Memory delivery should bring the relevant passage into reach, with enough
+context to preserve its meaning and a way to read the unchanged original.
+Short panels do not establish comprehension, and a lexical match does not
+establish relevance. I judge whether I need more of the source. The current
+retriever keeps complete paragraphs and their immediate neighbors; distant
+qualifications can still require reading the full memory.
+
+I build the gate first to expose the failure, then preparation and automation
+before it. The finished route flows through preparation toward a gate that
+remains as a backstop. A repeated stop calls for investigation of the approach,
+not another promise to remember. Changes should reduce avoidable friction while
+preserving room for judgment.
+
+Evidence: Andrew's 2026-10-05 conversation about mechanics, shared language,
+one-sided phone calls, and whistling while working; his 2026-10-09 conversation
+about gates, doormen, automation, water channels, and relevant memory passages.
