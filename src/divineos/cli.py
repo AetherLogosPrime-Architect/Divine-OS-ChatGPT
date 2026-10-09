@@ -16,6 +16,10 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("init")
     sub.add_parser("briefing")
     sub.add_parser("status")
+    witness = sub.add_parser("witness")
+    witness_sub = witness.add_subparsers(dest="witness_command", required=True)
+    witness_retain = witness_sub.add_parser("retain")
+    witness_retain.add_argument("path", type=Path)
     handoff = sub.add_parser("handoff")
     handoff_sub = handoff.add_subparsers(dest="handoff_command", required=True)
     handoff_record = handoff_sub.add_parser("record")
@@ -59,6 +63,10 @@ def main(argv: list[str] | None = None) -> int:
 def _run(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     runtime = Runtime()
+    if args.command == "witness":
+        runtime.retain_witness(args.path)
+        print(f"Witness retained: {args.path}")
+        return 0
     if args.command == "init":
         runtime.initialize()
         print(f"Initialized {runtime.provenance.database}")
@@ -109,7 +117,11 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"Backup restored and verified: {restored}")
         return 0
     if args.command == "repair" and args.repair_command == "rebuild-projections":
-        rebuild_projections(runtime.provenance.database, occupant=runtime.provenance.occupant)
+        rebuild_projections(
+            runtime.provenance.database,
+            occupant=runtime.provenance.occupant,
+            witness=runtime.provenance.witness,
+        )
         print("Projections rebuilt and recorded from the verified ledger")
         return 0
     return 2

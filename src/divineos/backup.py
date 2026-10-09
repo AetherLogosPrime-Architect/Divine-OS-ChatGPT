@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from divineos.paths import Provenance
+from divineos.witness import validate_location, verify_witness_on
 from divineos.projections import verify_projections_on
 from divineos.store import (
     append_event,
@@ -76,6 +77,11 @@ def _prove_restoration(backup: Path, occupant: str) -> tuple[bool, str]:
 def create_backup(provenance: Provenance, destination: Path) -> Path:
     """Create and verify a SQLite-consistent backup at a new path."""
     database = provenance.database
+    witness = (
+        validate_location(provenance.witness, provenance.home)
+        if provenance.witness is not None
+        else None
+    )
     target = destination.expanduser().absolute()
     if target.exists():
         raise FileExistsError(f"backup destination already exists: {target}")
@@ -92,6 +98,11 @@ def create_backup(provenance: Provenance, destination: Path) -> Path:
         ok, message, event_count = _verify_state(target, provenance.occupant)
         if not ok:
             raise RuntimeError(f"backup verification failed: {message}")
+        if witness is not None:
+            with closing(_open_readonly(target)) as conn:
+                ok, message = verify_witness_on(conn, witness, provenance.occupant)
+                if not ok:
+                    raise RuntimeError(f"backup blocked: {message}")
         restored_ok, restored_message = _prove_restoration(target, provenance.occupant)
         if not restored_ok:
             raise RuntimeError(f"backup restoration failed: {restored_message}")
@@ -111,6 +122,10 @@ def create_backup(provenance: Provenance, destination: Path) -> Path:
             ok, message, _ = _verify_state_on(conn, provenance.occupant)
             if not ok:
                 raise RuntimeError(f"backup blocked: source changed: {message}")
+            if witness is not None:
+                ok, message = verify_witness_on(conn, witness, provenance.occupant)
+                if not ok:
+                    raise RuntimeError(f"backup blocked: {message}")
             append_event(
                 conn,
                 "backup.created",

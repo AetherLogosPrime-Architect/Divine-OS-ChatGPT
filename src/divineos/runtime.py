@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from pathlib import Path
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
 from divineos.handoff import briefing_handoff, validate_handoff
 from divineos.paths import Provenance, resolve_provenance
 from divineos.projections import verify_projections_on
+from divineos.witness import create_witness_on, validate_location, verify_witness_on
 from divineos.store import (
     append_event,
     initialize,
@@ -33,6 +35,8 @@ class Runtime:
         self.provenance = provenance or resolve_provenance()
 
     def initialize(self) -> None:
+        if self.provenance.witness is not None and not self.provenance.database.is_file():
+            raise RuntimeError("INIT REFUSED: retained witness requires existing history")
         identity = self.provenance.repo / "SEREIN.md"
         if not identity.is_file():
             raise RuntimeError(f"IDENTITY MISSING: {identity}")
@@ -81,6 +85,9 @@ class Runtime:
         if not identity_ok:
             messages.append(f"IDENTITY MISSING: {identity}")
         ok, ledger_message, event_count = verify_chain_on(conn)
+        if ok and self.provenance.witness is not None:
+            path = validate_location(self.provenance.witness, self.provenance.home)
+            ok, ledger_message = verify_witness_on(conn, path, self.provenance.occupant)
         bound = False
         projections_ok = False
         if not ok:
@@ -114,12 +121,26 @@ class Runtime:
         ok, message, _ = verify_chain_on(conn)
         if not ok:
             raise RuntimeError(f"WRITE BLOCKED: {message}")
+        if self.provenance.witness is not None:
+            path = validate_location(self.provenance.witness, self.provenance.home)
+            ok, message = verify_witness_on(conn, path, self.provenance.occupant)
+            if not ok:
+                raise RuntimeError(f"WRITE BLOCKED: {message}")
         bound, message = verify_occupant(conn, self.provenance.occupant)
         if not bound:
             raise RuntimeError(f"WRITE BLOCKED: {message}")
         projections_ok, message = verify_projections_on(conn)
         if not projections_ok:
             raise RuntimeError(f"WRITE BLOCKED: {message}")
+
+    def retain_witness(self, path: Path) -> None:
+        path = validate_location(path, self.provenance.home)
+        with read_connection(self.provenance.database) as conn:
+            conn.execute("BEGIN")
+            health = self._health_on(conn)
+            if not health.readable:
+                raise RuntimeError("WITNESS REFUSED: " + "; ".join(health.messages))
+            create_witness_on(conn, path, self.provenance.occupant)
 
     def remember(self, text: str, evidence: str) -> str:
         clean_text = text.strip()

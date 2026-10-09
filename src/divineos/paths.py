@@ -13,6 +13,7 @@ class Provenance:
     database: Path
     interpreter: Path
     occupant: str
+    witness: Path | None = None
 
 
 def repo_root(start: Path | None = None) -> Path:
@@ -27,6 +28,10 @@ def resolve_provenance(*, start: Path | None = None) -> Provenance:
     repo = repo_root(start)
     configured = os.environ.get("DIVINEOS_HOME", "").strip()
     home = Path(configured).expanduser().resolve() if configured else repo / ".divineos"
+    from divineos.witness import validate_location
+
+    retained = os.environ.get("DIVINEOS_WITNESS", "").strip()
+    witness = validate_location(Path(retained).expanduser(), home) if retained else None
     return Provenance(
         repo=repo,
         home=home,
@@ -36,4 +41,5 @@ def resolve_provenance(*, start: Path | None = None) -> Provenance:
         # instead of the executable that actually launched this process.
         interpreter=Path(sys.executable).absolute(),
         occupant="Serein",
+        witness=witness,
     )

@@ -90,6 +90,23 @@ from the event ledger; ledger verification does not authenticate its contents.
 This makes standing corrections available on startup. Applying natural-language
 instructions still requires the agent's judgment; this is not a speech filter.
 
+## Retained history witness
+
+`divineos witness retain PATH` writes a new exclusive receipt outside the state
+home from a verified database snapshot. `DIVINEOS_WITNESS` selects a required
+receipt for Runtime health, reads, writes, lifecycle delivery, backup creation,
+and CLI projection repair. It binds occupant, genesis, sequence and event hash.
+Missing, malformed, mismatched or absent witnessed history blocks those routes;
+initialization cannot replace missing history while a witness is selected.
+Normal growth is accepted, and advancing the checkpoint requires a new receipt.
+
+This is optional configured rollback detection through the retained sequence,
+not a protected external authority. Loss after that sequence, replacement of
+both receipt and database, and removal of configuration are outside its guarantee.
+Backup verification/restoration certify internal integrity, not recency; restored
+state still needs Runtime verification against the selected witness before use.
+See `docs/FOUNDATION-PLAN.md` for ordering, evidence and deployment work still open.
+
 ## Lifecycle delivery and enforcement boundary
 
 `.codex/hooks.json` contains event routing, a command, and transport settings only.

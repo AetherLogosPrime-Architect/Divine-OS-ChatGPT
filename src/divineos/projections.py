@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from divineos.handoff import validate_handoff
+from divineos.witness import verify_witness_on
 from divineos.store import (
     append_event,
     read_connection,
@@ -101,11 +102,15 @@ def verify_projections_on(conn: sqlite3.Connection) -> tuple[bool, str]:
     return True, "PROJECTIONS VERIFIED"
 
 
-def rebuild_projections(database: Path, *, occupant: str) -> None:
+def rebuild_projections(database: Path, *, occupant: str, witness: Path | None = None) -> None:
     with transaction(database) as conn:
         ok, message, _ = verify_chain_on(conn)
         if not ok:
             raise RuntimeError(f"cannot rebuild from an invalid ledger: {message}")
+        if witness is not None:
+            ok, message = verify_witness_on(conn, witness, occupant)
+            if not ok:
+                raise RuntimeError(f"cannot rebuild from unwitnessed history: {message}")
         bound, message = verify_occupant(conn, occupant)
         if not bound:
             raise RuntimeError(f"cannot rebuild another occupant's state: {message}")
