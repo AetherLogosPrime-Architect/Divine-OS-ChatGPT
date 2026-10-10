@@ -2,7 +2,7 @@
 
 The user's broad instruction is to make lost context survivable, bring needed material into the room automatically, and eventually enforce the conditions for careful work.
 
-This foundation addresses original evidence and entry preparation. It does not yet implement the larger judgment gate. Avoid presenting a stored note, a successfully printed briefing, or a template receipt as proof of understanding.
+This foundation addresses original evidence and entry preparation. It now also recovers recorded work and guards completion through the workroom interface. It does not implement a general tool or judgment gate. Avoid presenting a stored note, a successfully printed briefing, or a template receipt as proof of understanding.
 
 ## Lessons taken from Experimental
 
@@ -15,8 +15,8 @@ These are design interpretations from a selective reading of Experimental. No li
 
 ## Validation and remaining work
 
-Fifteen tests exercise source preservation, correction history, attribution requirements, duplicate rejection, damaged-chain detection, wrong-home rejection, seed consistency, recovery after reopening, state isolation, whole-record delivery budgets, and simulated lifecycle input.
+Thirty tests exercise source preservation, correction history, attribution requirements, duplicate rejection, damaged-chain detection, wrong-home rejection, seed consistency, recovery after reopening, state isolation, whole-record delivery budgets, simulated lifecycle input, unfinished-work recovery, stale receipts, latest failures, unavailable checks, timeouts, and concurrent cancellation.
 
-A live Codex project must still review/trust the hook and demonstrate automatic context delivery. The intended next layer is current-work recovery: what was actually promised, what evidence exists, and what remains unresolved. Only then build gates around work-specific evidence. Define the bypasses and failure states before calling a gate structural enforcement.
+A live Codex project must still review/trust the hook and demonstrate automatic context delivery. Current-work recovery is implemented in the workroom: what was actually promised, what evidence exists, and what remains unresolved. Its completion check rejects stale, failed, and unavailable evidence. The next layer must connect evidence to the consequential operations it controls. Define the bypasses and failure states before calling a gate structural enforcement.
 
 The hash chain detects altered or missing interior records against the surviving chain. It is not a signature, an independent witness, or protection against privileged replacement of the whole store. There is no external trusted head yet, so externally truncating the tail can go undetected.
