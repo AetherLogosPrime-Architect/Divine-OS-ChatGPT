@@ -10,6 +10,10 @@ This first build keeps original words, their author, Codex's interpretation, and
 
 A session-entry hook prepares a briefing for Codex on startup, resume, clear, and compaction. Whole records fit into a delivery budget; larger records remain intact in storage with a recovery instruction. This is a beginning, not the finished OS.
 
+## Unfinished-work recovery
+
+The workroom records attributed promises, keeps their history, executes a chosen check, and rejects completion when the latest evidence failed, could not run, or refers to changed files. Session briefings bring unfinished commitments back into view. See [the workroom guide](docs/workroom.md) for the workflow and enforcement limits.
+
 ## Run locally
 
 Requires Python 3.10 or later. No third-party packages or API key.
@@ -41,7 +45,7 @@ The application rejects missing attribution, duplicate ids, changing seed text u
 
 An agent with unrestricted file access can replace the code or database, drop triggers, or rebuild a chain. This is a protection against accidental loss through the intended interface, not an independent security boundary. Tail deletion outside that interface is not detectable without an external trusted checkpoint.
 
-Preparing output does not prove delivery, reading, understanding, sound judgment, or completed work. Hooks can be disabled or skipped; this build does not gate general tool use. Next steps must test live delivery, add current-work recovery, and develop evidence checks that cannot be satisfied by merely filling in a template.
+Preparing output does not prove delivery, reading, understanding, sound judgment, or completed work. Hooks can be disabled or skipped; the workroom gates its own completion records but does not gate general tool use. Next steps must test live delivery and connect evidence checks to the consequential operations they are meant to control.
 
 ## Personal build note
 
