@@ -110,6 +110,7 @@ class HookTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         shutil.copy(temple.ROOT / "temple.py", self.root / "temple.py")
+        shutil.copy(temple.ROOT / "workroom.py", self.root / "workroom.py")
         shutil.copy(temple.ROOT / "teachings.json", self.root / "teachings.json")
 
     def tearDown(self):
@@ -127,6 +128,20 @@ class HookTests(unittest.TestCase):
         self.assertIn("Original:", context)
         self.assertIn("Interpretation (Codex):", context)
         self.assertIn("delivery is not proof", context)
+
+    def test_session_start_recovers_unfinished_work(self):
+        from workroom import Workroom
+        room = Workroom(self.root)
+        try:
+            room.create("recover-me", {"author": "User", "original": "Keep cooking.", "source": "Test",
+                                       "goal": "Recover unfinished work", "check": [sys.executable, "-c", "pass"]})
+        finally:
+            room.close()
+        result, output = self.invoke(dict(hook_event_name="SessionStart", session_id="new-context", cwd=str(self.root)))
+        self.assertEqual(result.returncode, 0)
+        context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("[recover-me] promised: Recover unfinished work", context)
+        self.assertLessEqual(len(context), 5000)
 
     def test_wrong_workspace_stops(self):
         result, output = self.invoke(dict(hook_event_name="SessionStart", session_id="one", cwd=str(self.root.parent)))
