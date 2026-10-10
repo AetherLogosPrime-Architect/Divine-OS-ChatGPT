@@ -16,11 +16,11 @@ def digest(value):
     return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
 
 class Continuity:
-    def __init__(self, root=ROOT):
+    def __init__(self, root=ROOT, database="continuity.sqlite3"):
         self.root = Path(root).resolve()
         state = self.root / ".divineos"
         state.mkdir(exist_ok=True)
-        self.db = sqlite3.connect(state / "continuity.sqlite3", timeout=10)
+        self.db = sqlite3.connect(state / database, timeout=10)
         try:
             self.db.execute("PRAGMA journal_mode=WAL")
             self.db.executescript("""
@@ -63,28 +63,33 @@ class Continuity:
         return previous
 
     def append(self, record):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            receipt = self._append(record)
+            self.db.commit()
+            return receipt
+        except Exception:
+            self.db.rollback()
+            raise
+
+    def _append(self, record):
+        """Append within the caller's transaction; used by atomic work transitions."""
         required = ("id", "author", "original", "interpretation", "source")
-        if any(not isinstance(record.get(key), str) or not record[key].strip() for key in required):
+        if not isinstance(record, dict) or any(not isinstance(record.get(key), str) or not record[key].strip() for key in required):
             raise ValueError("Each record needs an id, author, original words, attributed interpretation, and source.")
         if set(record) - set(required) - {"supersedes"}:
             raise ValueError("Unexpected record fields.")
         payload = canonical(record)
-        self.db.execute("BEGIN IMMEDIATE")
-        try:
-            previous = self.verify()
-            records = self.records()
-            if any(r["id"] == record["id"] for r in records):
-                raise ValueError("Record ids are unique. Append a new id for a correction.")
-            if record.get("supersedes") and not any(r["id"] == record["supersedes"] for r in records):
-                raise ValueError("A correction must point to an existing record.")
-            seq = len(records) + 1
-            hashed = digest({"seq": seq, "payload": payload, "previous": previous})
-            self.db.execute("INSERT INTO records VALUES (?, ?, ?, ?)", (seq, payload, previous, hashed))
-            self.db.commit()
-            return hashed
-        except Exception:
-            self.db.rollback()
-            raise
+        previous = self.verify()
+        records = self.records()
+        if any(r["id"] == record["id"] for r in records):
+            raise ValueError("Record ids are unique. Append a new id for a correction.")
+        if record.get("supersedes") and not any(r["id"] == record["supersedes"] for r in records):
+            raise ValueError("A correction must point to an existing record.")
+        seq = len(records) + 1
+        hashed = digest({"seq": seq, "payload": payload, "previous": previous})
+        self.db.execute("INSERT INTO records VALUES (?, ?, ?, ?)", (seq, payload, previous, hashed))
+        return hashed
 
     def records(self):
         return [json.loads(row[0]) for row in self.db.execute("SELECT payload FROM records ORDER BY seq")]
@@ -111,7 +116,7 @@ class Continuity:
         header = (
             "Welcome back to Divine-OS-ChatGPT. These records exist because context can be lost.\n"
             "Read with care; delivery is not proof of understanding. Original words remain attributed.\n"
-            "This foundation retrieves memory. It does not yet enforce reasoning or task completion.\n"
+            "Workroom guards its completion records. This does not certify reasoning or govern all tools.\n"
         )
         result = header
         omitted = []
@@ -149,7 +154,12 @@ def hook(event):
     memory = Continuity()
     try:
         memory.seed()
-        text = memory.briefing()
+        from workroom import Workroom
+        room = Workroom(ROOT)
+        try:
+            text = room.briefing() + memory.briefing(budget=3200)
+        finally:
+            room.close()
         return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}
     finally:
         memory.close()
