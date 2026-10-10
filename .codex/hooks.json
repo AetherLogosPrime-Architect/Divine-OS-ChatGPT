@@ -1,0 +1,20 @@
+{
+  "description": "Prepare attributed continuity on entry and after context compaction.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 temple.py hook",
+            "commandWindows": "python temple.py hook",
+            "timeout": 10,
+            "statusMessage": "Preparing Divine OS continuity",
+            "additionalContextLimit": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
