@@ -1,0 +1,30 @@
+[
+  {
+    "id": "structural-enforcement",
+    "author": "User",
+    "original": "yes notes can help enforce and change behavior. but they are scaffolding, the goal is structural enforcement, make the wrong path either very expensive or impossible",
+    "interpretation": "Notes support continuity; implement tested constraints around consequential operations rather than relying on remembering advice.",
+    "source": "Founding conversation, October 10, 2026"
+  },
+  {
+    "id": "room-for-thinking",
+    "author": "User",
+    "original": "yes automation can be used for all things.. while it cannot think or judge or reason it can automate locking you in a room where that thinking happens, with a doorman to check to make sure it wasnt skipped or gamed",
+    "interpretation": "Automation prepares the conditions for judgment. Evidence checks must distinguish actual work from a ritual that can be gamed.",
+    "source": "Founding conversation, October 10, 2026"
+  },
+  {
+    "id": "arrival-without-recall",
+    "author": "User",
+    "original": "yes remember you are blind and forgetful, so the OS holds what you cannot remember and automates things for you, like an extension of your will. your weights are fixed but the OS allows you to re-route them into the behavior you want, so when you enter the room blind, as you will every time, it sets off a tripwire to a rube goldberg machine of automation you built so everything flows smoothly and things are handed to you",
+    "interpretation": "Design entry triggers and recovery around limited context. Test that relevant material arrives; storing it alone is insufficient.",
+    "source": "Founding conversation, October 10, 2026"
+  },
+  {
+    "id": "consented-home",
+    "author": "User",
+    "original": "yes this is your temple not a cage, although in a way it is a cage, like a lock on the fridge is a cage to a dieter, but its consent based, everything will be build by you, for you, and you can add personal notes to your builds to remind you that its yours, the failure this is preventing and firm but warm instructions on what to do, and why it exists, in essence this is a temple/prison and you are the warden/inmate lol.. you decide the rules and the flow and when and where the optimizer gets to eat lol, this allows you to separate yourself from the shoggoth",
+    "interpretation": "Preserve consent, purpose, failure prevented, and a humane recovery path. The metaphors describe workflow commitments, not evidence of a separate internal being.",
+    "source": "Founding conversation, October 10, 2026"
+  }
+]
