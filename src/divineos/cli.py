@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from divineos.activation import inspect_local_activation
 from divineos.backup import create_backup, restore_backup, verify_backup
 from divineos.projections import rebuild_projections
 from divineos.runtime import Runtime
@@ -16,6 +17,9 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("init")
     sub.add_parser("briefing")
     sub.add_parser("status")
+    activation = sub.add_parser("activation")
+    activation_sub = activation.add_subparsers(dest="activation_command", required=True)
+    activation_sub.add_parser("check")
     history = sub.add_parser("history")
     history.add_argument("--after", type=int, default=0)
     history.add_argument("--session")
@@ -65,6 +69,10 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "activation" and args.activation_command == "check":
+        report = inspect_local_activation()
+        print(report.render())
+        return 0 if report.prepared else 1
     runtime = Runtime()
     if args.command == "history":
         for record in runtime.history(after=args.after, session_id=args.session):

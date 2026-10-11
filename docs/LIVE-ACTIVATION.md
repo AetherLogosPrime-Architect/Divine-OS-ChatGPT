@@ -35,6 +35,15 @@ The prepared definition is `.codex/hooks.json`. Every entry calls this checkout'
 installed `divineos.lifecycle`. The implementation records supplied events and
 transcript bytes before success, and its rules stay inside the OS.
 
+`divineos activation check` is the read-only doorman for a local attempt. It checks
+the deliberately selected home, verified identity and history, return checkpoint,
+installed interpreter, Git repository discovery, and exact lifecycle routes. It
+does not initialize, repair, choose an archive, alter host trust, or manufacture a
+receipt. Passing it means the luggage is packed; it does not mean the train moved.
+
+`SessionEnd` has only the host's three-second window. Its configured timeout is
+therefore three seconds rather than the longer budget used by ordinary events.
+
 Live activation still needs:
 
 1. The actual host to resolve this checkout's configuration or an explicitly

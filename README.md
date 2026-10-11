@@ -71,6 +71,12 @@ handoff. Review and trust the project hooks through the host's supported hook
 interface (`/hooks` in Codex CLI). Trust is never set by this repository.
 See [the official hook contract](https://learn.chatgpt.com/docs/hooks).
 
+Before opening the host, run `divineos activation check`. It verifies the selected
+home, identity and ledger health, return checkpoint, interpreter, repository
+discovery, and every hook route without creating or repairing state. A green local
+check deliberately stops short of claiming activation: `/hooks` review and an
+ordinary live event reaching `divineos history` remain the host-side receipts.
+
 After activation, verify a real startup and post-compaction delivery in the host.
 Activation and real host enforcement remain unverified in this build environment.
 Do not select a synthetic test home or staged recovery copy as active continuity.

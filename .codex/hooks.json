@@ -86,7 +86,7 @@
           {
             "type": "command",
             "command": "\"$(git rev-parse --show-toplevel)/.venv/bin/python\" -I -m divineos.lifecycle",
-            "timeout": 30
+            "timeout": 3
           }
         ]
       }
